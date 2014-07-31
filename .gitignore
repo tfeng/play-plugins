@@ -1,1 +1,15 @@
-/RemoteSystemsTempFiles
+.history
+/*.iml
+/.classpath
+/.idea
+/.idea_modules
+/.metadata/
+/.project
+/.settings/
+/RemoteSystemsTempFiles/
+/dist/
+/out/
+/logs/
+/project/project/
+/project/target/
+/target/
