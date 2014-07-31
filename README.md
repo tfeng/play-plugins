@@ -1,2 +1,2 @@
-play-plugins
-============
+A set of plugins for Play! framework
+===========
