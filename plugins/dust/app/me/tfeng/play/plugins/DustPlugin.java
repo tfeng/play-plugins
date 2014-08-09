@@ -8,6 +8,7 @@ import java.nio.charset.Charset;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -89,6 +90,12 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
     queue = new LinkedBlockingQueue<>();
     executor = new ThreadPoolExecutor(jsEnginePoolSize, jsEnginePoolSize, jsEnginePoolTimeoutMs,
         TimeUnit.MILLISECONDS, queue);
+    executor.setRejectedExecutionHandler(new RejectedExecutionHandler() {
+      @Override
+      public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+        LOG.warn("JS engine dropped a request; executor " + executor);
+      }
+    });
     executionContext = ExecutionContexts.fromExecutorService(executor);
   }
 
