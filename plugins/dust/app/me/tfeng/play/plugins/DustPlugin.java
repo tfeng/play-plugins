@@ -5,8 +5,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import javax.script.Bindings;
 import javax.script.Invocable;
@@ -24,8 +27,11 @@ import play.Logger;
 import play.Logger.ALogger;
 import play.Play;
 import play.libs.F.Promise;
+import scala.concurrent.ExecutionContextExecutorService;
+import scala.concurrent.Future;
+import akka.dispatch.ExecutionContexts;
+import akka.dispatch.Futures;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.CharStreams;
@@ -46,29 +52,53 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
 
   private final WebJarAssetLocator assetLocator = new WebJarAssetLocator();
 
-  private Object dustJs;
+  private ConcurrentLinkedQueue<ScriptEngine> engines;
 
-  private ScriptEngine engine;
+  private ExecutionContextExecutorService executionContext;
 
-  private Set<String> loadedTemplates = new HashSet<String>();
+  private ThreadPoolExecutor executor;
+
+  @Value("${dust-plugin.js-engine-pool-size:20}")
+  private int jsEnginePoolSize;
+
+  @Value("${dust-plugin.js-engine-pool-timeout-ms:10000}")
+  private long jsEnginePoolTimeoutMs;
 
   private final ObjectMapper mapper = new ObjectMapper();
+
+  private BlockingQueue<Runnable> queue;
 
   @Value("${dust-plugin.templates-directory:templates}")
   private String templatesDirectory;
 
   public DustPlugin(Application application) throws ScriptException {
     super(application);
+  }
 
-    // Need to use the initial class loader to access extension libraries.
-    engine = new ScriptEngineManager(null).getEngineByName("nashorn");
-    dustJs = initializeScriptEngine();
+  @Override
+  public void onStart() {
+    super.onStart();
+
+    engines = new ConcurrentLinkedQueue<ScriptEngine>();
+    for (int i = 0; i < jsEnginePoolSize; i++) {
+      ScriptEngine engine = new ScriptEngineManager(null).getEngineByName("nashorn");
+      initializeScriptEngine(engine);
+      engines.offer(engine);
+    }
+
+    queue = new LinkedBlockingQueue<>();
+    executor = new ThreadPoolExecutor(jsEnginePoolSize, jsEnginePoolSize, jsEnginePoolTimeoutMs,
+        TimeUnit.MILLISECONDS, queue);
+    executionContext = ExecutionContexts.fromExecutorService(executor);
   }
 
   public Promise<String> render(String template, JsonNode data) {
-    return Promise.promise(() -> {
+    Future<String> future = Futures.future(() -> {
+      ScriptEngine engine = engines.poll();
+      boolean isRegistered = engine.eval("dust.cache[\"" + template + "\"]") != null;
+
       try {
-        if (!loadedTemplates.contains(template)) {
+        if (!isRegistered) {
           String jsFileName = templatesDirectory + "/" + template + ".js";
           if (LOG.isDebugEnabled()) {
             LOG.debug("Loading template " + jsFileName);
@@ -79,45 +109,40 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
           InputStream jsStream = WebJarAssetLocator.class.getClassLoader().getResourceAsStream(
               assetLocator.getFullPath(jsFileName));
           compiledTemplate = readAndClose(jsStream);
+          Object dustJs = engine.eval("dust");
           invocable.invokeMethod(dustJs, "loadSource", compiledTemplate);
-          loadedTemplates.add(template);
         }
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("Rendering template " + template);
         }
-        StringWriter writer = new StringWriter();
+
         String json = mapper.writeValueAsString(data);
+        StringWriter writer = new StringWriter();
         Bindings bindings = new SimpleBindings();
         bindings.put("name", template);
         bindings.put("json", json);
         bindings.put("writer", writer);
         engine.getContext().setBindings(bindings, ScriptContext.GLOBAL_SCOPE);
+
         engine.eval(RENDER_SCRIPT, engine.getContext());
         return writer.toString();
-      } catch (ScriptException | NoSuchMethodException e) {
-        throw new RuntimeException("Unable to execute javascript", e);
-      } catch (JsonProcessingException e) {
-        throw new RuntimeException("Unable to process json data " + data, e);
+      } finally {
+        engines.add(engine);
       }
-    });
+    }, executionContext);
+
+    return Promise.wrap(future);
   }
 
-  private Object initializeScriptEngine() {
+  private void initializeScriptEngine(ScriptEngine engine) {
     String dustJsPath = assetLocator.getFullPath(DUST_JS_NAME);
-    InputStream dustJsStream =
-        WebJarAssetLocator.class.getClassLoader().getResourceAsStream(dustJsPath);
+    String dustJs = readAndClose(WebJarAssetLocator.class.getClassLoader().getResourceAsStream(
+        dustJsPath));
     try {
-      engine.eval(new InputStreamReader(dustJsStream));
-      return engine.eval("dust");
+      engine.eval(dustJs);
     } catch (ScriptException e) {
       throw new RuntimeException("Unable to initialize script engine", e);
-    } finally {
-      try {
-        dustJsStream.close();
-      } catch (IOException e) {
-        throw new RuntimeException("Unable to close stream", e);
-      }
     }
   }
 
