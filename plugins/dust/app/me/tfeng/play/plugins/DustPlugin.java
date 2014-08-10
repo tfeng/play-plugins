@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -13,7 +14,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.script.Bindings;
-import javax.script.Invocable;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -35,6 +35,7 @@ import akka.dispatch.Futures;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CharStreams;
 
 public class DustPlugin extends AbstractPlugin<DustPlugin> {
@@ -44,8 +45,8 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
   private static final ALogger LOG = Logger.of(DustPlugin.class);
 
   private static final String RENDER_SCRIPT =
-      "{dust.render(name, JSON.parse(json), function(err, data) {"
-          + "if (err) throw new Error(err); else writer.write(data, 0, data.length); });}";
+      "dust.render(name, JSON.parse(json), function(err, data) {"
+          + "if (err) throw new Error(err); else writer.write(data, 0, data.length); })";
 
   public static DustPlugin getInstance() {
     return Play.application().plugin(DustPlugin.class);
@@ -59,7 +60,7 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
 
   private ThreadPoolExecutor executor;
 
-  @Value("${dust-plugin.js-engine-pool-size:20}")
+  @Value("${dust-plugin.js-engine-pool-size:4}")
   private int jsEnginePoolSize;
 
   @Value("${dust-plugin.js-engine-pool-timeout-ms:10000}")
@@ -93,7 +94,7 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
     executor.setRejectedExecutionHandler(new RejectedExecutionHandler() {
       @Override
       public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-        LOG.warn("JS engine dropped a request; executor " + executor);
+        LOG.warn("JS engine rejected a request; executor " + executor);
       }
     });
     executionContext = ExecutionContexts.fromExecutorService(executor);
@@ -102,22 +103,22 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
   public Promise<String> render(String template, JsonNode data) {
     Future<String> future = Futures.future(() -> {
       ScriptEngine engine = engines.poll();
-      boolean isRegistered = engine.eval("dust.cache[\"" + template + "\"]") != null;
 
       try {
+        boolean isRegistered =
+            ((Boolean) evaluate(engine, "dust.cache[template] !== undefined",
+                ImmutableMap.of("template", template))).booleanValue();
+
         if (!isRegistered) {
           String jsFileName = templatesDirectory + "/" + template + ".js";
           if (LOG.isDebugEnabled()) {
             LOG.debug("Loading template " + jsFileName);
           }
 
-          String compiledTemplate;
-          Invocable invocable = (Invocable) engine;
           InputStream jsStream = WebJarAssetLocator.class.getClassLoader().getResourceAsStream(
               assetLocator.getFullPath(jsFileName));
-          compiledTemplate = readAndClose(jsStream);
-          Object dustJs = engine.eval("dust");
-          invocable.invokeMethod(dustJs, "loadSource", compiledTemplate);
+          String compiledTemplate = readAndClose(jsStream);
+          evaluate(engine, "dust.loadSource(source)", ImmutableMap.of("source", compiledTemplate));
         }
 
         if (LOG.isDebugEnabled()) {
@@ -126,13 +127,8 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
 
         String json = mapper.writeValueAsString(data);
         StringWriter writer = new StringWriter();
-        Bindings bindings = new SimpleBindings();
-        bindings.put("name", template);
-        bindings.put("json", json);
-        bindings.put("writer", writer);
-        engine.getContext().setBindings(bindings, ScriptContext.GLOBAL_SCOPE);
-
-        engine.eval(RENDER_SCRIPT, engine.getContext());
+        evaluate(engine, RENDER_SCRIPT,
+            ImmutableMap.of("name", template, "json", json, "writer", writer));
         return writer.toString();
       } finally {
         engines.add(engine);
@@ -140,6 +136,13 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
     }, executionContext);
 
     return Promise.wrap(future);
+  }
+
+  private Object evaluate(ScriptEngine engine, String script, Map<String, Object> data)
+      throws ScriptException {
+    Bindings bindings = new SimpleBindings(data);
+    engine.getContext().setBindings(bindings, ScriptContext.GLOBAL_SCOPE);
+    return engine.eval(script);
   }
 
   private void initializeScriptEngine(ScriptEngine engine) {
