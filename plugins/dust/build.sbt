@@ -1,9 +1,14 @@
+import me.tfeng.play.plugins._
+
 name := "dust-plugin"
+
+sbtPlugin := true
 
 Settings.common
 
 libraryDependencies ++= Seq(
-  "org.webjars" % "webjars-locator" % "0.17",
-  "org.webjars" % "dustjs-linkedin" % "2.4.0-1",
+  "org.webjars" % "dustjs-linkedin" % Versions.dustjs,
   "me.tfeng.play-plugins" % "spring-plugin" % version.value
 )
+
+addSbtPlugin("me.tfeng.sbt-plugins" % "dust-plugin" % Versions.sbtDustPlugin)

@@ -1,12 +1,14 @@
-import com.typesafe.sbt.pgp._
-import com.typesafe.sbteclipse.plugin.EclipsePlugin._
+import me.tfeng.play.plugins._
+
 import sbt._
 import Keys._
+
+import com.typesafe.sbt.pgp._
 
 object Settings {
   val common: Seq[Setting[_]] = Seq(
     organization := "me.tfeng.play-plugins",
-    version := "0.1.2-SNAPSHOT",
+    version := Versions.project,
     crossPaths := false,
     pomExtra :=
       <developers>

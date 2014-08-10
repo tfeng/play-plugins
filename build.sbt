@@ -15,7 +15,7 @@ lazy val oauth2 =
     project in file("plugins/oauth2") enablePlugins(PlayJava) dependsOn(security)
 
 lazy val dust =
-    project in file("plugins/dust") enablePlugins(PlayJava) dependsOn(spring)
+    project in file("plugins/dust") enablePlugins(PlayScala) dependsOn(spring)
 
 lazy val oauth2Example =
     project in file("examples/oauth2") enablePlugins(PlayJava) dependsOn(oauth2)
