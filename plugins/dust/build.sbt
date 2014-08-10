@@ -12,3 +12,5 @@ libraryDependencies ++= Seq(
 )
 
 addSbtPlugin("me.tfeng.sbt-plugins" % "dust-plugin" % Versions.sbtDustPlugin)
+
+unmanagedSourceDirectories in Compile += baseDirectory.value / "../../project"

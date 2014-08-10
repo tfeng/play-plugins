@@ -3,8 +3,6 @@ import me.tfeng.play.plugins._
 import sbt._
 import Keys._
 
-import com.typesafe.sbt.pgp._
-
 object Settings {
   val common: Seq[Setting[_]] = Seq(
     organization := "me.tfeng.play-plugins",
@@ -38,9 +36,7 @@ object Settings {
     publishArtifact := false,
     publish := (),
     publishLocal := (),
-    publishM2 := (),
-    PgpKeys.publishSigned := (),
-    PgpKeys.publishLocalSigned := ()
+    publishM2 := ()
   )
 
   val integrationTest = Seq(
