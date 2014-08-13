@@ -1,7 +1,7 @@
 import me.tfeng.play.plugins._
 
-name := "dust-plugin-example"
+name := "avro-plugin-example"
 
 Settings.common ++ Settings.disablePublishing
 
-SbtDust.settings
+SbtAvro.settings

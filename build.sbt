@@ -1,3 +1,5 @@
+import me.tfeng.play.plugins._
+
 name := "parent"
 
 Settings.common ++ Settings.disablePublishing
@@ -19,6 +21,9 @@ lazy val dust =
 
 lazy val oauth2Example =
     project in file("examples/oauth2") enablePlugins(PlayJava) dependsOn(oauth2)
+
+lazy val avroExample =
+    project in file("examples/avro") enablePlugins(PlayScala) dependsOn(spring)
 
 lazy val dustExample =
     project in file("examples/dust") enablePlugins(PlayJava) dependsOn(dust)

@@ -1,7 +1,7 @@
-import me.tfeng.play.plugins._
+package me.tfeng.play.plugins
 
 import sbt._
-import Keys._
+import sbt.Keys._
 
 object Settings {
   val common: Seq[Setting[_]] = Seq(
