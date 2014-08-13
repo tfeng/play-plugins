@@ -10,6 +10,6 @@ object DustJs extends AutoPlugin {
   override lazy val projectSettings = settings
 
   lazy val settings = Seq(
-      libraryDependencies += "me.tfeng.play-plugins" % "dust-plugin" % Versions.project
+      addSbtPlugin("me.tfeng.play-plugins" % "dust-plugin" % Versions.project)
   ) ++ SbtDust.settings
 }
