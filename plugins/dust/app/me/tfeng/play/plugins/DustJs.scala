@@ -1,9 +1,7 @@
 package me.tfeng.play.plugins
 
 import me.tfeng.sbt.plugins.SbtDust
-
-import sbt._
-import sbt.Keys._
+import sbt.{AutoPlugin, addSbtPlugin, toGroupID}
 
 object DustJs extends AutoPlugin {
 
