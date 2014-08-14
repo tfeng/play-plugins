@@ -12,6 +12,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import javax.script.Bindings;
 import javax.script.ScriptContext;
@@ -52,7 +53,7 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
     return Play.application().plugin(DustPlugin.class);
   }
 
-  private final WebJarAssetLocator assetLocator = new WebJarAssetLocator();
+  private WebJarAssetLocator assetLocator;
 
   private ConcurrentLinkedQueue<ScriptEngine> engines;
 
@@ -80,6 +81,10 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
   @Override
   public void onStart() {
     super.onStart();
+
+    assetLocator =
+        new WebJarAssetLocator(WebJarAssetLocator.getFullPathIndex(Pattern.compile(".*\\.js$"),
+            getApplication().classloader()));
 
     engines = new ConcurrentLinkedQueue<ScriptEngine>();
     for (int i = 0; i < jsEnginePoolSize; i++) {
@@ -115,7 +120,7 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
             LOG.debug("Loading template " + jsFileName);
           }
 
-          InputStream jsStream = WebJarAssetLocator.class.getClassLoader().getResourceAsStream(
+          InputStream jsStream = getApplication().classloader().getResourceAsStream(
               assetLocator.getFullPath(jsFileName));
           String compiledTemplate = readAndClose(jsStream);
           evaluate(engine, "dust.loadSource(source)", ImmutableMap.of("source", compiledTemplate));
@@ -147,8 +152,7 @@ public class DustPlugin extends AbstractPlugin<DustPlugin> {
 
   private void initializeScriptEngine(ScriptEngine engine) {
     String dustJsPath = assetLocator.getFullPath(DUST_JS_NAME);
-    String dustJs = readAndClose(WebJarAssetLocator.class.getClassLoader().getResourceAsStream(
-        dustJsPath));
+    String dustJs = readAndClose(getApplication().classloader().getResourceAsStream(dustJsPath));
     try {
       engine.eval(dustJs);
     } catch (ScriptException e) {
