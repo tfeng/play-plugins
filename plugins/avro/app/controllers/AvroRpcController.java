@@ -10,36 +10,40 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.avro.AvroRemoteException;
+import me.tfeng.play.plugins.AvroPlugin;
+
 import org.apache.avro.ipc.Responder;
 import org.apache.avro.ipc.specific.SpecificResponder;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.stereotype.Component;
 
 import play.mvc.BodyParser;
 import play.mvc.Controller;
 import play.mvc.Result;
 import play.mvc.Results;
-import controllers.protocols.Example;
 
 /**
  * @see org.apache.avro.ipc.HttpTransceiver
  * @author tfeng
  */
-public class AvroController extends Controller {
-
-  public static class ExampleImpl implements Example {
-
-    @Override
-    public String echo(String message) throws AvroRemoteException {
-      return message;
-    }
-  }
+@Component
+public class AvroRpcController extends Controller {
 
   @BodyParser.Of(BodyParser.Raw.class)
-  public Result index() {
+  public Result index(String beanName) {
+    AvroPlugin plugin = AvroPlugin.getInstance();
+    ConfigurableApplicationContext applicationContext = plugin.getApplicationContext();
+    Object implementation = applicationContext.getBean(beanName);
+    Class<?> interfaceClass = plugin.getInterfaceMap().get(beanName);
+    if (interfaceClass == null) {
+      throw new RuntimeException("Interface for bean " + beanName
+          + " is not defined in interface map");
+    }
+
     try {
       byte[] bytes = request().body().asRaw().asBytes();
       List<ByteBuffer> buffers = readBuffers(new ByteArrayInputStream(bytes));
-      Responder responder = new SpecificResponder(Example.class, new ExampleImpl());
+      Responder responder = new SpecificResponder(interfaceClass, implementation);
 
       List<ByteBuffer> response = responder.respond(buffers);
       ByteArrayOutputStream outStream = new ByteArrayOutputStream();
@@ -60,15 +64,17 @@ public class AvroController extends Controller {
     List<ByteBuffer> buffers = new ArrayList<ByteBuffer>();
     while (true) {
       int length = readLength(in);
-      if (length == 0) {                       // end of buffers
+      if (length == 0) {
+        // end of buffers
         return buffers;
       }
       ByteBuffer buffer = ByteBuffer.allocate(length);
       while (buffer.hasRemaining()) {
         int p = buffer.position();
         int i = in.read(buffer.array(), p, buffer.remaining());
-        if (i < 0)
+        if (i < 0) {
           throw new EOFException("Unexpected EOF");
+        }
         buffer.position(p+i);
       }
       buffer.flip();

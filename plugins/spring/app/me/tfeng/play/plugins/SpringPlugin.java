@@ -10,6 +10,7 @@ import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
 import play.Play;
+import play.api.Plugin;
 import play.libs.Scala;
 
 import com.google.common.collect.Lists;
@@ -39,8 +40,7 @@ public class SpringPlugin extends AbstractPlugin<SpringPlugin> {
         Lists.newArrayList(getConfiguration().getStringList("spring-plugin.spring-config-locations",
             Collections.singletonList("classpath*:spring/*.xml")));
 
-    List<play.api.Plugin> plugins =
-        Scala.asJava(getApplication().getWrappedApplication().plugins());
+    List<Plugin> plugins = Scala.asJava(getApplication().getWrappedApplication().plugins());
     for (play.api.Plugin plugin : plugins) {
       WithSpringConfig annotation = plugin.getClass().getAnnotation(WithSpringConfig.class);
       if (annotation != null) {

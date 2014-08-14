@@ -3,7 +3,7 @@ package me.tfeng.play.plugins
 import me.tfeng.sbt.plugins.SbtDust
 import sbt.{AutoPlugin, addSbtPlugin, toGroupID}
 
-object DustJs extends AutoPlugin {
+object Dust extends AutoPlugin {
 
   override lazy val projectSettings = settings
 

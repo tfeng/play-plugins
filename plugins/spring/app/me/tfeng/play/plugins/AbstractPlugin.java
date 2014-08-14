@@ -15,6 +15,10 @@ public class AbstractPlugin<T extends Plugin> extends Plugin {
     this.application = application;
   }
 
+  public ConfigurableApplicationContext getApplicationContext() {
+    return application.plugin(SpringPlugin.class).getApplicationContext();
+  }
+
   @Override
   public void onStart() {
     AutowiredAnnotationBeanPostProcessor beanPostProcessor =
@@ -25,10 +29,6 @@ public class AbstractPlugin<T extends Plugin> extends Plugin {
 
   protected Application getApplication() {
     return application;
-  }
-
-  protected ConfigurableApplicationContext getApplicationContext() {
-    return application.plugin(SpringPlugin.class).getApplicationContext();
   }
 
   protected Configuration getConfiguration() {

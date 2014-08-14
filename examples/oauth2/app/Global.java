@@ -1,26 +1,16 @@
-import me.tfeng.play.plugins.SpringPlugin;
+import me.tfeng.play.plugins.SpringGlobalSettings;
 
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.common.exceptions.OAuth2Exception;
 import org.springframework.security.oauth2.provider.ClientRegistrationException;
 
-import play.GlobalSettings;
 import play.libs.F.Promise;
 import play.mvc.Http.RequestHeader;
 import play.mvc.Result;
 import play.mvc.Results;
 
-public class Global extends GlobalSettings {
-
-  @Override
-  public <A> A getControllerInstance(Class<A> clazz) {
-    try {
-      return SpringPlugin.getInstance().getApplicationContext().getBean(clazz);
-    } catch (Exception e) {
-      return null;
-    }
-  }
+public class Global extends SpringGlobalSettings {
 
   @Override
   public Promise<Result> onError(RequestHeader request, Throwable t) {

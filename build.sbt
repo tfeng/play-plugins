@@ -5,7 +5,7 @@ name := "parent"
 Settings.common ++ Settings.disablePublishing
 
 lazy val parent =
-    project in file(".") aggregate(spring, security, oauth2, oauth2Example, dust, dustExample)
+    project in file(".") aggregate(spring, security, oauth2, dust, avro, oauth2Example, avroExample, dustExample)
 
 lazy val spring =
     project in file("plugins/spring") enablePlugins(PlayJava)
@@ -19,11 +19,14 @@ lazy val oauth2 =
 lazy val dust =
     project in file("plugins/dust") enablePlugins(PlayScala) dependsOn(spring)
 
+lazy val avro =
+    project in file("plugins/avro") enablePlugins(PlayScala) dependsOn(spring)
+
 lazy val oauth2Example =
     project in file("examples/oauth2") enablePlugins(PlayJava) dependsOn(oauth2)
 
 lazy val avroExample =
-    project in file("examples/avro") enablePlugins(PlayScala) dependsOn(spring)
+    project in file("examples/avro") enablePlugins(PlayScala) dependsOn(avro)
 
 lazy val dustExample =
     project in file("examples/dust") enablePlugins(PlayJava) dependsOn(dust)

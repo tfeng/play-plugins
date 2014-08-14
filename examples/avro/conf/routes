@@ -1,1 +1,1 @@
-POST     /                   @controllers.AvroController.index()
+POST     /                   @controllers.AvroRpcController.index(beanName = "example")
