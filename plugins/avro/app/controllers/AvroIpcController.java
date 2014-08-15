@@ -27,7 +27,7 @@ import play.mvc.Results;
  * @author tfeng
  */
 @Component
-public class AvroRpcController extends Controller {
+public class AvroIpcController extends Controller {
 
   @BodyParser.Of(BodyParser.Raw.class)
   public Result index(String beanName) {
