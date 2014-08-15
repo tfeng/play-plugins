@@ -1,1 +1,2 @@
-POST     /                   @controllers.AvroIpcController.index(beanName = "example")
+POST    /            me.tfeng.play.avro.BinaryIpcController.post(implementation = "example")
+POST    /:message    me.tfeng.play.avro.JsonIpcController.post(message, implementation = "example")

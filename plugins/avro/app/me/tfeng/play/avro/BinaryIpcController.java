@@ -1,4 +1,4 @@
-package controllers;
+package me.tfeng.play.avro;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -15,7 +15,6 @@ import me.tfeng.play.plugins.AvroPlugin;
 import org.apache.avro.ipc.Responder;
 import org.apache.avro.ipc.specific.SpecificResponder;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.stereotype.Component;
 
 import play.mvc.BodyParser;
 import play.mvc.Controller;
@@ -26,24 +25,31 @@ import play.mvc.Results;
  * @see org.apache.avro.ipc.HttpTransceiver
  * @author tfeng
  */
-@Component
-public class AvroIpcController extends Controller {
+public class BinaryIpcController extends Controller {
+
+  public static final String CONTENT_TYPE = "avro/binary";
 
   @BodyParser.Of(BodyParser.Raw.class)
-  public Result index(String beanName) {
+  public static Result post(String implementation) {
+    String contentType = request().getHeader("content-type");
+    if (!CONTENT_TYPE.equals(contentType)) {
+      throw new RuntimeException("Unable to handle content-type " + contentType + "; "
+          + CONTENT_TYPE + " is expected");
+    }
+
     AvroPlugin plugin = AvroPlugin.getInstance();
     ConfigurableApplicationContext applicationContext = plugin.getApplicationContext();
-    Object implementation = applicationContext.getBean(beanName);
-    Class<?> interfaceClass = plugin.getInterfaceMap().get(beanName);
+    Object implementationBean = applicationContext.getBean(implementation);
+    Class<?> interfaceClass = plugin.getInterfaceMap().get(implementation);
     if (interfaceClass == null) {
-      throw new RuntimeException("Interface for bean " + beanName
+      throw new RuntimeException("Interface for bean " + implementation
           + " is not defined in interface map");
     }
 
     try {
       byte[] bytes = request().body().asRaw().asBytes();
       List<ByteBuffer> buffers = readBuffers(new ByteArrayInputStream(bytes));
-      Responder responder = new SpecificResponder(interfaceClass, implementation);
+      Responder responder = new SpecificResponder(interfaceClass, implementationBean);
 
       List<ByteBuffer> response = responder.respond(buffers);
       ByteArrayOutputStream outStream = new ByteArrayOutputStream();
@@ -60,7 +66,7 @@ public class AvroIpcController extends Controller {
     }
   }
 
-  private List<ByteBuffer> readBuffers(InputStream in) throws IOException {
+  private static List<ByteBuffer> readBuffers(InputStream in) throws IOException {
     List<ByteBuffer> buffers = new ArrayList<ByteBuffer>();
     while (true) {
       int length = readLength(in);
@@ -82,11 +88,11 @@ public class AvroIpcController extends Controller {
     }
   }
 
-  private int readLength(InputStream in) throws IOException {
+  private static int readLength(InputStream in) throws IOException {
     return (in.read() << 24) + (in.read() << 16) + (in.read() << 8) + in.read();
   }
 
-  private void writeBuffers(List<ByteBuffer> buffers, OutputStream out) throws IOException {
+  private static void writeBuffers(List<ByteBuffer> buffers, OutputStream out) throws IOException {
     for (ByteBuffer buffer : buffers) {
       writeLength(buffer.limit(), out);           // length-prefix
       out.write(buffer.array(), buffer.position(), buffer.remaining());
@@ -95,7 +101,7 @@ public class AvroIpcController extends Controller {
     writeLength(0, out);                          // null-terminate
   }
 
-  private void writeLength(int length, OutputStream out) throws IOException {
+  private static void writeLength(int length, OutputStream out) throws IOException {
     out.write(0xff & (length >>> 24));
     out.write(0xff & (length >>> 16));
     out.write(0xff & (length >>> 8));
