@@ -20,6 +20,7 @@
 
   <util:map id="avroRpcInterfaceMap" value-type="java.lang.Class">
     <entry key="example" value="controllers.protocols.Example" />
+    <entry key="points" value="controllers.protocols.Points" />
   </util:map>
 
 </beans>
