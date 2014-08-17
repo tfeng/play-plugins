@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -11,6 +12,7 @@ import java.util.List;
 
 import me.tfeng.play.plugins.AvroPlugin;
 
+import org.apache.avro.AvroRemoteException;
 import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Protocol;
 import org.apache.avro.Protocol.Message;
@@ -21,6 +23,7 @@ import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.io.JsonEncoder;
 import org.apache.avro.ipc.HandshakeResponse;
 import org.apache.avro.ipc.RPCContext;
 import org.apache.avro.ipc.Requestor;
@@ -101,7 +104,7 @@ public class JsonIpcController extends Controller {
   }
 
   @BodyParser.Of(BodyParser.Raw.class)
-  public static Result post(String message, String implementation) {
+  public static Result post(String message, String implementation) throws Throwable {
     String contentType = request().getHeader("content-type");
     if (!CONTENT_TYPE.equals(contentType)) {
       throw new RuntimeException("Unable to handle content-type " + contentType + "; "
@@ -117,21 +120,21 @@ public class JsonIpcController extends Controller {
           + " is not defined in interface map");
     }
 
+    byte[] bytes = request().body().asRaw().asBytes();
+    Protocol protocol = (Protocol) interfaceClass.getField("PROTOCOL").get(null);
+    GenericRequestor requestor = new GenericRequestor(protocol, EMPTY_TRANSCEIVER);
+    Object request = getRequest(requestor, protocol, message, bytes);
+    List<ByteBuffer> buffers = convertToBuffers(request);
+    Responder responder = new SpecificResponder(interfaceClass, implementationBean);
+
+    List<ByteBuffer> responseBuffers = responder.respond(buffers);
+
     try {
-      byte[] bytes = request().body().asRaw().asBytes();
-      Protocol protocol = (Protocol) interfaceClass.getField("PROTOCOL").get(null);
-      GenericRequestor requestor = new GenericRequestor(protocol, EMPTY_TRANSCEIVER);
-      Object request = getRequest(requestor, protocol, message, bytes);
-      List<ByteBuffer> buffers = convertToBuffers(request);
-      Responder responder = new SpecificResponder(interfaceClass, implementationBean);
-
-      List<ByteBuffer> responseBuffers = responder.respond(buffers);
       Object response = getResponse(requestor, request, responseBuffers);
-
       return Results.ok(convertJson(protocol.getMessages().get(message).getResponse(), response));
-
-    } catch (Exception e) {
-      throw new RuntimeException(e);
+    } catch (AvroRemoteException e) {
+      Schema schema = protocol.getMessages().get(message).getErrors();
+      return Results.badRequest(convertJson(schema, e.getValue()));
     }
   }
 
@@ -141,35 +144,48 @@ public class JsonIpcController extends Controller {
     JsonGenerator generator =
         new JsonFactory().createJsonGenerator(outputStream, JsonEncoding.UTF8);
     generator.useDefaultPrettyPrinter();
-    writer.write(response, EncoderFactory.get().jsonEncoder(schema, generator));
-    generator.flush();
+    JsonEncoder encoder = EncoderFactory.get().jsonEncoder(schema, generator);
+    writer.write(response, encoder);
+    encoder.flush();
     return outputStream.toString();
   }
 
   @SuppressWarnings({ "rawtypes", "unchecked" })
-  private static List<ByteBuffer> convertToBuffers(Object requestObject) throws Exception {
-    return (List) REQUEST_GETBYTES_METHOD.invoke(requestObject);
+  private static List<ByteBuffer> convertToBuffers(Object requestObject) throws Throwable {
+    try {
+      return (List) REQUEST_GETBYTES_METHOD.invoke(requestObject);
+    } catch (InvocationTargetException e) {
+      throw e.getCause();
+    }
   }
 
   private static Object getRequest(Requestor requestor, Protocol protocol, String message, byte[] data)
-      throws Exception {
-    Message messageObject = protocol.getMessages().get(message);
-    if (messageObject == null) {
-      throw new AvroRuntimeException("No message named "+ message + " in "+ protocol);
+      throws Throwable {
+    try {
+      Message messageObject = protocol.getMessages().get(message);
+      if (messageObject == null) {
+        throw new AvroRuntimeException("No message named "+ message + " in "+ protocol);
+      }
+      Schema schema = messageObject.getRequest();
+      GenericDatumReader<Object> reader = new GenericDatumReader<Object>(schema);
+      Object request = reader.read(null, DecoderFactory.get().jsonDecoder(schema,
+          new ByteArrayInputStream(data)));
+      return REQUEST_CONSTRUCTOR.newInstance(requestor, message, request, new RPCContext());
+    } catch (InvocationTargetException e) {
+      throw e.getCause();
     }
-    Schema schema = messageObject.getRequest();
-    GenericDatumReader<Object> reader = new GenericDatumReader<Object>(schema);
-    Object request = reader.read(null, DecoderFactory.get().jsonDecoder(schema,
-        new ByteArrayInputStream(data)));
-    return REQUEST_CONSTRUCTOR.newInstance(requestor, message, request, new RPCContext());
   }
 
   private static Object getResponse(Requestor requestor, Object request, List<ByteBuffer> buffers)
-      throws Exception {
-    ByteBufferInputStream bbi = new ByteBufferInputStream(buffers);
-    BinaryDecoder in = DecoderFactory.get().binaryDecoder(bbi, null);
-    HANDSHAKE_READER.read(null, in);
-    Object responseObject = RESPONSE_CONSTRUCTOR.newInstance(requestor, request, in);
-    return RESPONSE_GETRESPONSE_METHOD.invoke(responseObject);
+      throws Throwable {
+    try {
+      ByteBufferInputStream bbi = new ByteBufferInputStream(buffers);
+      BinaryDecoder in = DecoderFactory.get().binaryDecoder(bbi, null);
+      HANDSHAKE_READER.read(null, in);
+      Object responseObject = RESPONSE_CONSTRUCTOR.newInstance(requestor, request, in);
+      return RESPONSE_GETRESPONSE_METHOD.invoke(responseObject);
+    } catch (InvocationTargetException e) {
+      throw e.getCause();
+    }
   }
 }

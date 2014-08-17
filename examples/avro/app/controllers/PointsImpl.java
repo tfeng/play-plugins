@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import com.google.common.collect.Lists;
 
+import controllers.protocols.KTooLargeError;
 import controllers.protocols.Point;
 import controllers.protocols.Points;
 
@@ -50,7 +51,11 @@ public class PointsImpl implements Points {
   }
 
   @Override
-  public List<Point> getNearestPoints(Point from, int k) throws AvroRemoteException {
+  public List<Point> getNearestPoints(Point from, int k) throws KTooLargeError {
+    if (points.size() < k) {
+      throw KTooLargeError.newBuilder().setK(k).build();
+    }
+
     PriorityQueue<Point> queue = new PriorityQueue<>(new DescendingPointComparator(from));
     for (Point point : points) {
       queue.add(point);

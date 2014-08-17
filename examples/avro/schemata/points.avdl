@@ -5,9 +5,13 @@ protocol Points {
     double x, y;
   }
 
+  error KTooLargeError {
+    int k;
+  }
+
   void addPoint(Point point);
 
   void clear() oneway;
 
-  array<Point> getNearestPoints(Point from, int k);
+  array<Point> getNearestPoints(Point from, int k) throws KTooLargeError;
 }

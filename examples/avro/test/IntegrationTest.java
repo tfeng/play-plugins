@@ -1,4 +1,5 @@
 import static org.fest.assertions.Assertions.assertThat;
+import static org.fest.assertions.Fail.fail;
 import static play.test.Helpers.running;
 import static play.test.Helpers.testServer;
 
@@ -7,8 +8,10 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
+import org.apache.avro.AvroRemoteException;
 import org.apache.avro.Protocol;
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.ipc.HttpTransceiver;
@@ -23,6 +26,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import com.google.common.collect.ImmutableList;
 
 import controllers.protocols.Example;
+import controllers.protocols.KTooLargeError;
 import controllers.protocols.Point;
 import controllers.protocols.Points;
 
@@ -66,31 +70,56 @@ public class IntegrationTest {
         Point center = Point.newBuilder().setX(0.0).setY(0.0).build();
 
         // []
-        assertThat(points.getNearestPoints(center, 1)).isEqualTo(ImmutableList.of());
+        try {
+          points.getNearestPoints(center, 1);
+          fail("KTooLargeError is expected");
+        } catch (KTooLargeError e) {
+          assertThat(e.getK()).isEqualTo(1);
+        }
 
         // [one]
         Point one = Point.newBuilder().setX(1.0).setY(1.0).build();
         points.addPoint(one);
         assertThat(points.getNearestPoints(center, 1)).isEqualTo(ImmutableList.of(one));
-        assertThat(points.getNearestPoints(center, 2)).isEqualTo(ImmutableList.of(one));
+        try {
+          points.getNearestPoints(center, 2);
+          fail("KTooLargeError is expected");
+        } catch (KTooLargeError e) {
+          assertThat(e.getK()).isEqualTo(2);
+        }
 
         // [one, five]
         Point five = Point.newBuilder().setX(5.0).setY(5.0).build();
         points.addPoint(five);
         assertThat(points.getNearestPoints(center, 1)).isEqualTo(ImmutableList.of(one));
         assertThat(points.getNearestPoints(center, 2)).isEqualTo(ImmutableList.of(one, five));
-        assertThat(points.getNearestPoints(center, 3)).isEqualTo(ImmutableList.of(one, five));
+        try {
+          points.getNearestPoints(center, 3);
+          fail("KTooLargeError is expected");
+        } catch (KTooLargeError e) {
+          assertThat(e.getK()).isEqualTo(3);
+        }
 
         // [one, five, five]
         points.addPoint(five);
         assertThat(points.getNearestPoints(center, 1)).isEqualTo(ImmutableList.of(one));
         assertThat(points.getNearestPoints(center, 2)).isEqualTo(ImmutableList.of(one, five));
         assertThat(points.getNearestPoints(center, 3)).isEqualTo(ImmutableList.of(one, five, five));
-        assertThat(points.getNearestPoints(center, 4)).isEqualTo(ImmutableList.of(one, five, five));
+        try {
+          points.getNearestPoints(center, 4);
+          fail("KTooLargeError is expected");
+        } catch (KTooLargeError e) {
+          assertThat(e.getK()).isEqualTo(4);
+        }
 
         // []
         points.clear();
-        assertThat(points.getNearestPoints(center, 1)).isEqualTo(ImmutableList.of());
+        try {
+          points.getNearestPoints(center, 1);
+          fail("KTooLargeError is expected");
+        } catch (KTooLargeError e) {
+          assertThat(e.getK()).isEqualTo(1);
+        }
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -102,12 +131,19 @@ public class IntegrationTest {
     running(testServer(3333), () -> {
       try {
         String url = "http://localhost:3333/points";
+        GenericData.Record record = new GenericData.Record(Points.PROTOCOL.getMessages()
+            .get("getNearestPoints").getErrors().getTypes().get(1));
         Object response;
 
         // []
-        response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
-            "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 1}");
-        assertThat(response).isEqualTo(ImmutableList.of());
+        try {
+          response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
+              "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 1}");
+          fail("AvroRemoteException is expected");
+        } catch (AvroRemoteException e) {
+          record.put("k", 1);
+          assertThat(e.getValue()).isEqualTo(record);
+        }
 
         // [one]
         Point one = Point.newBuilder().setX(1.0).setY(1.0).build();
@@ -115,9 +151,14 @@ public class IntegrationTest {
         response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
             "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 1}");
         assertThat(response.toString()).isEqualTo(ImmutableList.of(one).toString());
-        response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
-            "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 2}");
-        assertThat(response.toString()).isEqualTo(ImmutableList.of(one).toString());
+        try {
+          response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
+              "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 2}");
+          fail("AvroRemoteException is expected");
+        } catch (AvroRemoteException e) {
+          record.put("k", 2);
+          assertThat(e.getValue()).isEqualTo(record);
+        }
 
         // [one, five]
         Point five = Point.newBuilder().setX(5.0).setY(5.0).build();
@@ -128,9 +169,14 @@ public class IntegrationTest {
         response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
             "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 2}");
         assertThat(response.toString()).isEqualTo(ImmutableList.of(one, five).toString());
-        response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
-            "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 3}");
-        assertThat(response.toString()).isEqualTo(ImmutableList.of(one, five).toString());
+        try {
+          response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
+              "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 3}");
+          fail("AvroRemoteException is expected");
+        } catch (AvroRemoteException e) {
+          record.put("k", 3);
+          assertThat(e.getValue()).isEqualTo(record);
+        }
 
         // [one, five, five]
         sendJsonRequest(url, Points.PROTOCOL, "addPoint", "{\"point\": {\"x\": 5.0, \"y\": 5.0}}");
@@ -143,15 +189,25 @@ public class IntegrationTest {
         response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
             "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 3}");
         assertThat(response.toString()).isEqualTo(ImmutableList.of(one, five, five).toString());
-        response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
-            "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 4}");
-        assertThat(response.toString()).isEqualTo(ImmutableList.of(one, five, five).toString());
+        try {
+          response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
+              "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 4}");
+          fail("AvroRemoteException is expected");
+        } catch (AvroRemoteException e) {
+          record.put("k", 4);
+          assertThat(e.getValue()).isEqualTo(record);
+        }
 
         // []
         sendJsonRequest(url, Points.PROTOCOL, "clear", "");
-        response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
-            "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 1}");
-        assertThat(response.toString()).isEqualTo(ImmutableList.of().toString());
+        try {
+          response = sendJsonRequest(url, Points.PROTOCOL, "getNearestPoints",
+              "{\"from\": {\"x\": 0.0, \"y\": 0.0}, \"k\": 1}");
+          fail("AvroRemoteException is expected");
+        } catch (AvroRemoteException e) {
+          record.put("k", 1);
+          assertThat(e.getValue()).isEqualTo(record);
+        }
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
