@@ -15,12 +15,20 @@
   <context:component-scan base-package="controllers" />
 
   <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
-    <property name="location" value="classpath:application.conf" />
+    <property name="locations">
+      <list>
+        <value>classpath:application.conf</value>
+        <value>classpath:avro-d2-plugin.properties</value>
+      </list>
+    </property>
   </bean>
 
   <util:map id="avroIpcInterfaceMap" value-type="java.lang.Class">
     <entry key="example" value="controllers.protocols.Example" />
-    <entry key="points" value="controllers.protocols.Points" />
+  </util:map>
+
+  <util:map id="avroD2ProtocolMap" value-type="java.lang.Class">
+    <entry key="example" value="controllers.protocols.Example" />
   </util:map>
 
 </beans>

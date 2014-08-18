@@ -16,7 +16,7 @@ public class AvroPlugin extends AbstractPlugin<AvroPlugin> {
 
   private Map<String, Class<?>> interfaceMap;
 
-  @Value("${avro-plugin.rpc-interface-map:avroRpcInterfaceMap}")
+  @Value("${avro-plugin.ipc-interface-map:avroIpcInterfaceMap}")
   private String interfaceMapName;
 
   public AvroPlugin(Application application) {

@@ -14,4 +14,8 @@ object Versions {
   val springSecurityOauth = "2.0.2.RELEASE"
 
   val dustjs = "2.4.0-1"
+
+  val jline = "2.12"
+
+  val zookeeper = "3.4.6"
 }

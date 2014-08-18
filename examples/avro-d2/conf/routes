@@ -1,0 +1,1 @@
+POST    /example             me.tfeng.play.avro.BinaryIpcController.post(implementation = "example")
