@@ -16,11 +16,10 @@ public class AvroD2Server {
   protected String nodePath;
   protected final Protocol protocol;
   protected final URL serverUrl;
-
   protected final ZooKeeper zk;
 
-  public AvroD2Server(ZooKeeper zk, Protocol protocol, URL serverUrl)
-      throws KeeperException, InterruptedException {
+  public AvroD2Server(ZooKeeper zk, Protocol protocol, URL serverUrl) throws KeeperException,
+      InterruptedException {
     this.zk = zk;
     this.protocol = protocol;
     this.serverUrl = serverUrl;

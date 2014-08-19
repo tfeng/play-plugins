@@ -21,15 +21,26 @@ public class AvroD2Helper {
 
   public static final Charset UTF8 = Charset.forName("utf8");
 
+  public static void ensurePath(ZooKeeper zk, String path) throws KeeperException,
+      InterruptedException {
+    int index = path.lastIndexOf("/");
+    if (index > 0) {
+      ensurePath(zk, path.substring(0, index));
+    }
+    String part = path.substring(index + 1);
+    if (!part.isEmpty()) {
+      try {
+        zk.create(path, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+      } catch (NodeExistsException e) {
+        // Ignore.
+      }
+    }
+  }
+
   public static String createProtocolNode(ZooKeeper zk, Protocol protocol, URL serverUrl)
       throws KeeperException, InterruptedException {
-    try {
-      zk.create("/" + protocol.getName(), null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-    } catch (NodeExistsException e) {
-      // Ignore.
-    }
-
-    return zk.create(AvroD2Helper.getZkPath(protocol), serverUrl.toString().getBytes(),
+    ensurePath(zk, getZkPath(protocol));
+    return zk.create(AvroD2Helper.getZkPath(protocol) + "/", serverUrl.toString().getBytes(),
         Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
   }
 
