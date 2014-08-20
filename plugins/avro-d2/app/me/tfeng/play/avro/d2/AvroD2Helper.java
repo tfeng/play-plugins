@@ -21,6 +21,13 @@ public class AvroD2Helper {
 
   public static final Charset UTF8 = Charset.forName("utf8");
 
+  public static String createProtocolNode(ZooKeeper zk, Protocol protocol, URL serverUrl)
+      throws KeeperException, InterruptedException {
+    ensurePath(zk, getZkPath(protocol));
+    return zk.create(AvroD2Helper.getZkPath(protocol) + "/", serverUrl.toString().getBytes(),
+        Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+  }
+
   public static void ensurePath(ZooKeeper zk, String path) throws KeeperException,
       InterruptedException {
     int index = path.lastIndexOf("/");
@@ -37,11 +44,13 @@ public class AvroD2Helper {
     }
   }
 
-  public static String createProtocolNode(ZooKeeper zk, Protocol protocol, URL serverUrl)
-      throws KeeperException, InterruptedException {
-    ensurePath(zk, getZkPath(protocol));
-    return zk.create(AvroD2Helper.getZkPath(protocol) + "/", serverUrl.toString().getBytes(),
-        Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+  public static Protocol getProtocol(Class<?> interfaceClass) {
+    try {
+      return (Protocol) interfaceClass.getField("PROTOCOL").get(null);
+    } catch (Exception e) {
+      throw new RuntimeException("Unable to get protocol for interface class "
+          + interfaceClass.getName());
+    }
   }
 
   public static URI getUri(Protocol protocol) {

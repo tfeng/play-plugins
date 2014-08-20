@@ -20,7 +20,7 @@ lazy val avro =
     project in file("plugins/avro") enablePlugins(PlayScala) dependsOn(spring)
 
 lazy val avroD2 =
-    project in file("plugins/avro-d2") enablePlugins(PlayJava) dependsOn(avro)
+    project in file("plugins/avro-d2") enablePlugins(PlayScala) dependsOn(avro)
 
 lazy val dust =
     project in file("plugins/dust") enablePlugins(PlayScala) dependsOn(spring)
