@@ -3,7 +3,7 @@ package me.tfeng.play.plugins
 import me.tfeng.sbt.plugins.SbtAvro
 import sbt.{AutoPlugin, addSbtPlugin, toGroupID}
 
-object Avro extends AutoPlugin {
+object AvroD2 extends AutoPlugin {
 
   override lazy val projectSettings = settings
 

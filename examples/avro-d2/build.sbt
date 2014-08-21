@@ -4,6 +4,9 @@ name := "avro-d2-plugin-example"
 
 Settings.common ++ Settings.disablePublishing ++ Settings.integrationTest
 
-libraryDependencies += "org.springframework" % "spring-test" % Versions.spring % "test"
+libraryDependencies ++= Seq(
+  javaWs % "test",
+  "org.springframework" % "spring-test" % Versions.spring % "test"
+)
 
 SbtAvro.settings

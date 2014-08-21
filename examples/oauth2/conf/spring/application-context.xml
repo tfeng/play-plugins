@@ -11,8 +11,6 @@
 
   <context:component-scan base-package="controllers,security" />
 
-  <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
-    <property name="location" value="classpath:application.conf" />
-  </bean>
+  <context:property-placeholder location="application.conf" />
 
 </beans>
