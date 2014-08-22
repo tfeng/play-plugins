@@ -5,34 +5,22 @@ name := "parent"
 Settings.common ++ Settings.disablePublishing
 
 lazy val parent =
-    project in file(".") aggregate(spring, security, oauth2, avro, avroD2, dust, oauth2Example, avroExample, avroD2Example, dustExample)
+    project in file(".") aggregate(spring, security, oauth2, avro, avroD2, dust)
 
 lazy val spring =
-    project in file("plugins/spring") enablePlugins(PlayJava)
+    project in file("spring-plugin") enablePlugins(PlayJava)
 
 lazy val security =
-    project in file("plugins/security") enablePlugins(PlayJava) dependsOn(spring)
+    project in file("security-plugin") enablePlugins(PlayJava) dependsOn(spring)
 
 lazy val oauth2 =
-    project in file("plugins/oauth2") enablePlugins(PlayJava) dependsOn(security)
+    project in file("oauth2-plugin") enablePlugins(PlayJava) dependsOn(security)
 
 lazy val avro =
-    project in file("plugins/avro") enablePlugins(PlayScala) dependsOn(spring)
+    project in file("avro-plugin") enablePlugins(PlayScala) dependsOn(spring)
 
 lazy val avroD2 =
-    project in file("plugins/avro-d2") enablePlugins(PlayScala) dependsOn(avro)
+    project in file("avro-d2-plugin") enablePlugins(PlayScala) dependsOn(avro)
 
 lazy val dust =
-    project in file("plugins/dust") enablePlugins(PlayScala) dependsOn(spring)
-
-lazy val oauth2Example =
-    project in file("examples/oauth2") enablePlugins(PlayJava) dependsOn(oauth2)
-
-lazy val avroExample =
-    project in file("examples/avro") enablePlugins(PlayJava) dependsOn(avro)
-
-lazy val avroD2Example =
-    project in file("examples/avro-d2") enablePlugins(PlayJava) dependsOn(avroD2)
-
-lazy val dustExample =
-    project in file("examples/dust") enablePlugins(PlayJava) dependsOn(dust)
+    project in file("dust-plugin") enablePlugins(PlayScala) dependsOn(spring)

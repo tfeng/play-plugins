@@ -1,2 +1,0 @@
-POST    /example             me.tfeng.play.avro.BinaryIpcController.post(implementation = "example")
-GET     /client              controllers.ClientController.invoke(message ?= "message from client")
