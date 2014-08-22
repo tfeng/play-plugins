@@ -8,6 +8,6 @@ Settings.common
 
 libraryDependencies += "org.apache.avro" % "avro-ipc" % Versions.avro
 
-addSbtPlugin("me.tfeng.sbt-plugins" % "avro-plugin" % Versions.sbtDustPlugin)
+addSbtPlugin("me.tfeng.sbt-plugins" % "avro-plugin" % Versions.sbtPlugins)
 
 unmanagedSourceDirectories in Compile += baseDirectory.value / "../project"

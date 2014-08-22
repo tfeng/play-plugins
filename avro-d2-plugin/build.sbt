@@ -11,4 +11,4 @@ libraryDependencies ++= Seq(
   "org.apache.zookeeper" % "zookeeper" % Versions.zookeeper
 )
 
-addSbtPlugin("me.tfeng.sbt-plugins" % "avro-plugin" % Versions.sbtDustPlugin)
+addSbtPlugin("me.tfeng.sbt-plugins" % "avro-plugin" % Versions.sbtPlugins)

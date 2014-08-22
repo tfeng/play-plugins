@@ -38,8 +38,4 @@ object Settings {
     publishLocal := (),
     publishM2 := ()
   )
-
-  val integrationTest = Seq(
-    fork in Test := false
-  )
 }

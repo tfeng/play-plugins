@@ -11,6 +11,6 @@ libraryDependencies ++= Seq(
   "me.tfeng.play-plugins" % "spring-plugin" % version.value
 )
 
-addSbtPlugin("me.tfeng.sbt-plugins" % "dust-plugin" % Versions.sbtDustPlugin)
+addSbtPlugin("me.tfeng.sbt-plugins" % "dust-plugin" % Versions.sbtPlugins)
 
 unmanagedSourceDirectories in Compile += baseDirectory.value / "../project"
