@@ -17,7 +17,7 @@ import org.apache.zookeeper.ZooKeeper;
 
 public class AvroD2Helper {
 
-  public static final String SCHEME = "avlb";
+  public static final String SCHEME = "avsd";
 
   public static final Charset UTF8 = Charset.forName("utf8");
 
