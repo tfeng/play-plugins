@@ -1,9 +1,9 @@
 package me.tfeng.play.plugins
 
 object Versions {
-  val project = "0.1.2-SNAPSHOT"
+  val project = "0.1.2"
 
-  val sbtPlugins = "0.1.2-SNAPSHOT"
+  val sbtPlugins = "0.1.2"
 
   val avro = "1.7.7"
 
@@ -14,8 +14,6 @@ object Versions {
   val springSecurityOauth = "2.0.2.RELEASE"
 
   val dustjs = "2.4.0-1"
-
-  val jline = "2.12"
 
   val zookeeper = "3.4.6"
 }
