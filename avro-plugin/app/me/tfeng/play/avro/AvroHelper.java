@@ -18,19 +18,21 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.plugins
+package me.tfeng.play.avro;
 
-import me.tfeng.sbt.plugins.SbtDust
-import sbt.{AutoPlugin, addSbtPlugin, toGroupID}
+import org.apache.avro.Protocol;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-object Dust extends AutoPlugin {
+public class AvroHelper {
 
-  override lazy val projectSettings = settings
-
-  lazy val settings = Seq(
-      addSbtPlugin("me.tfeng.play-plugins" % "dust-plugin" % Versions.project)
-  ) ++ SbtDust.settings
+  public static Protocol getProtocol(Class<?> protocol) {
+    try {
+      return (Protocol) protocol.getField("PROTOCOL").get(null);
+    } catch (Exception e) {
+      throw new RuntimeException("Unable to get protocol for interface class "
+          + protocol.getName());
+    }
+  }
 }

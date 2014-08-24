@@ -1,3 +1,23 @@
+/**
+ * Copyright 2014 Thomas Feng
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package me.tfeng.play.plugins;
 
 import java.lang.reflect.Proxy;
@@ -10,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import jline.internal.Log;
+import me.tfeng.play.avro.AvroHelper;
 import me.tfeng.play.avro.d2.AvroD2Client;
 import me.tfeng.play.avro.d2.AvroD2Helper;
 import me.tfeng.play.avro.d2.AvroD2Server;
@@ -22,9 +42,16 @@ import org.apache.zookeeper.ZooKeeper;
 import org.springframework.beans.factory.annotation.Value;
 
 import play.Application;
+import play.Logger;
+import play.Logger.ALogger;
 import play.Play;
 
+/**
+ * @author Thomas Feng (huining.feng@gmail.com)
+ */
 public class AvroD2Plugin extends AbstractPlugin<AvroD2Plugin> implements Watcher {
+
+  private static final ALogger LOG = Logger.of(AvroD2Plugin.class);
 
   public static AvroD2Plugin getInstance() {
     return Play.application().plugin(AvroD2Plugin.class);
@@ -32,10 +59,10 @@ public class AvroD2Plugin extends AbstractPlugin<AvroD2Plugin> implements Watche
 
   private final Map<URI, AvroD2Client> clients = new HashMap<>();
 
-  private Map<String, Class<?>> protocolMap;
+  private Map<Class<?>, String> protocolPaths;
 
-  @Value("${avro-d2-plugin.protocol-map:avroD2ProtocolMap}")
-  private String protocolMapName;
+  @Value("${avro-d2-plugin.protocol-paths:avroProtocolPaths}")
+  private String protocolPathsName;
 
   @Value("${avro-d2-plugin.server-host}")
   private String serverHost;
@@ -58,7 +85,7 @@ public class AvroD2Plugin extends AbstractPlugin<AvroD2Plugin> implements Watche
   }
 
   public <T> T getClient(Class<T> interfaceClass) {
-    URI uri = AvroD2Helper.getUri(AvroD2Helper.getProtocol(interfaceClass));
+    URI uri = AvroD2Helper.getUri(AvroHelper.getProtocol(interfaceClass));
     AvroD2Client client = clients.get(uri);
     if (client == null) {
       client = new AvroD2Client(zk, interfaceClass);
@@ -73,15 +100,15 @@ public class AvroD2Plugin extends AbstractPlugin<AvroD2Plugin> implements Watche
   public void onStart() {
     super.onStart();
 
-    protocolMap = Collections.<String, Class<?>>unmodifiableMap(
-        getApplicationContext().getBean(protocolMapName, Map.class));
+    protocolPaths = Collections.<Class<?>, String>unmodifiableMap(
+        getApplicationContext().getBean(protocolPathsName, Map.class));
 
     try {
       zk = new ZooKeeper(zkConnectString, zkSessionTimeout, this);
-      servers = new ArrayList<>(protocolMap.size());
-      for (Entry<String, Class<?>> entry : protocolMap.entrySet()) {
-        Protocol protocol = AvroD2Helper.getProtocol(entry.getValue());
-        String path = entry.getKey();
+      servers = new ArrayList<>(protocolPaths.size());
+      for (Entry<Class<?>, String> entry : protocolPaths.entrySet()) {
+        Protocol protocol = AvroHelper.getProtocol(entry.getKey());
+        String path = entry.getValue();
         if (!path.startsWith("/")) {
           path = "/" + path;
         }
@@ -101,7 +128,7 @@ public class AvroD2Plugin extends AbstractPlugin<AvroD2Plugin> implements Watche
 
   @Override
   public void process(WatchedEvent event) {
-    Log.info(event);
+    LOG.info(event.toString());
   }
 
   public void refreshClients() {

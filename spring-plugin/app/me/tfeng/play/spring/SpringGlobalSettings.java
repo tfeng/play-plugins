@@ -18,43 +18,37 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.plugins;
+package me.tfeng.play.spring;
 
-import java.util.Collections;
-import java.util.Map;
+import me.tfeng.play.plugins.SpringPlugin;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
+import org.springframework.context.ConfigurableApplicationContext;
 
 import play.Application;
-import play.Play;
+import play.GlobalSettings;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroPlugin extends AbstractPlugin<AvroPlugin> {
+public class SpringGlobalSettings extends GlobalSettings {
 
-  public static AvroPlugin getInstance() {
-    return Play.application().plugin(AvroPlugin.class);
-  }
-
-  private Map<Class<?>, Object> protocolImplementations;
-
-  @Value("${avro-plugin.protocol-implementations:avroProtocolImplementations}")
-  private String protocolImplementationsName;
-
-  public AvroPlugin(Application application) {
-    super(application);
-  }
-
-  public Map<Class<?>, Object> getProtocolImplementations() {
-    return protocolImplementations;
+  @Override
+  public <A> A getControllerInstance(Class<A> clazz) {
+    try {
+      return SpringPlugin.getInstance().getApplicationContext().getBean(clazz);
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public void onStart() {
-    super.onStart();
-    protocolImplementations = Collections.<Class<?>, Object>unmodifiableMap(
-        getApplicationContext().getBean(protocolImplementationsName, Map.class));
+  public void onStart(Application application) {
+    ConfigurableApplicationContext applicationContext =
+        application.plugin(SpringPlugin.class).getApplicationContext();
+    AutowiredAnnotationBeanPostProcessor beanPostProcessor =
+        new AutowiredAnnotationBeanPostProcessor();
+    beanPostProcessor.setBeanFactory(applicationContext.getBeanFactory());
+    beanPostProcessor.processInjection(this);
   }
 }

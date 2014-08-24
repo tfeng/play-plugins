@@ -18,19 +18,21 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.plugins
+package me.tfeng.play.spring;
 
-import me.tfeng.sbt.plugins.SbtDust
-import sbt.{AutoPlugin, addSbtPlugin, toGroupID}
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-object Dust extends AutoPlugin {
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+public @interface WithSpringConfig {
 
-  override lazy val projectSettings = settings
-
-  lazy val settings = Seq(
-      addSbtPlugin("me.tfeng.play-plugins" % "dust-plugin" % Versions.project)
-  ) ++ SbtDust.settings
+  String[] value();
 }

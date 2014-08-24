@@ -1,3 +1,23 @@
+/**
+ * Copyright 2014 Thomas Feng
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package me.tfeng.play.avro.d2;
 
 import java.io.IOException;
@@ -8,6 +28,8 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
+import me.tfeng.play.avro.AvroHelper;
+
 import org.apache.avro.Protocol;
 import org.apache.avro.ipc.specific.SpecificRequestor;
 import org.apache.zookeeper.WatchedEvent;
@@ -17,6 +39,9 @@ import org.apache.zookeeper.ZooKeeper;
 import play.Logger;
 import play.Logger.ALogger;
 
+/**
+ * @author Thomas Feng (huining.feng@gmail.com)
+ */
 public class AvroD2Client implements Watcher, InvocationHandler {
 
   private static final ALogger LOG = Logger.of(AvroD2Client.class);
@@ -30,7 +55,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   public AvroD2Client(ZooKeeper zk, Class<?> interfaceClass) {
     this.zk = zk;
 
-    protocol = AvroD2Helper.getProtocol(interfaceClass);
+    protocol = AvroHelper.getProtocol(interfaceClass);
     refresh();
 
     try {

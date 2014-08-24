@@ -1,3 +1,23 @@
+/**
+ * Copyright 2014 Thomas Feng
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package me.tfeng.play.avro;
 
 import java.io.ByteArrayInputStream;
@@ -36,13 +56,16 @@ import org.apache.avro.util.ByteBufferInputStream;
 import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
-import org.springframework.context.ConfigurableApplicationContext;
 
+import play.Play;
 import play.mvc.BodyParser;
 import play.mvc.Controller;
 import play.mvc.Result;
 import play.mvc.Results;
 
+/**
+ * @author Thomas Feng (huining.feng@gmail.com)
+ */
 public class JsonIpcController extends Controller {
 
   private static class EmptyTransceiver extends Transceiver {
@@ -104,7 +127,7 @@ public class JsonIpcController extends Controller {
   }
 
   @BodyParser.Of(BodyParser.Raw.class)
-  public static Result post(String message, String implementation) throws Throwable {
+  public static Result post(String message, String protocol) throws Throwable {
     String contentType = request().getHeader("content-type");
     if (!CONTENT_TYPE.equals(contentType)) {
       throw new RuntimeException("Unable to handle content-type " + contentType + "; "
@@ -112,28 +135,24 @@ public class JsonIpcController extends Controller {
     }
 
     AvroPlugin plugin = AvroPlugin.getInstance();
-    ConfigurableApplicationContext applicationContext = plugin.getApplicationContext();
-    Object implementationBean = applicationContext.getBean(implementation);
-    Class<?> interfaceClass = plugin.getInterfaceMap().get(implementation);
-    if (interfaceClass == null) {
-      throw new RuntimeException("Interface for bean " + implementation
-          + " is not defined in interface map");
-    }
 
+    Class<?> protocolClass = Play.application().classloader().loadClass(protocol);
+    Object implementation = plugin.getProtocolImplementations().get(protocolClass);
     byte[] bytes = request().body().asRaw().asBytes();
-    Protocol protocol = (Protocol) interfaceClass.getField("PROTOCOL").get(null);
-    GenericRequestor requestor = new GenericRequestor(protocol, EMPTY_TRANSCEIVER);
-    Object request = getRequest(requestor, protocol, message, bytes);
+    Protocol avroProtocol = (Protocol) protocolClass.getField("PROTOCOL").get(null);
+    GenericRequestor requestor = new GenericRequestor(avroProtocol, EMPTY_TRANSCEIVER);
+    Object request = getRequest(requestor, avroProtocol, message, bytes);
     List<ByteBuffer> buffers = convertToBuffers(request);
-    Responder responder = new SpecificResponder(interfaceClass, implementationBean);
+    Responder responder = new SpecificResponder(protocolClass, implementation);
 
     List<ByteBuffer> responseBuffers = responder.respond(buffers);
 
     try {
       Object response = getResponse(requestor, request, responseBuffers);
-      return Results.ok(convertJson(protocol.getMessages().get(message).getResponse(), response));
+      return Results.ok(
+          convertJson(avroProtocol.getMessages().get(message).getResponse(), response));
     } catch (AvroRemoteException e) {
-      Schema schema = protocol.getMessages().get(message).getErrors();
+      Schema schema = avroProtocol.getMessages().get(message).getErrors();
       return Results.badRequest(convertJson(schema, e.getValue()));
     }
   }

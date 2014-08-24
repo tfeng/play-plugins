@@ -7,7 +7,6 @@ sbtPlugin := true
 Settings.common
 
 libraryDependencies ++= Seq(
-  "jline" % "jline" % Versions.jline,
   "org.apache.zookeeper" % "zookeeper" % Versions.zookeeper
 )
 
