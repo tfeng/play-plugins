@@ -23,6 +23,7 @@ package me.tfeng.play.plugins;
 import me.tfeng.play.spring.WithSpringConfig;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.oauth2.provider.ClientDetailsService;
 import org.springframework.security.oauth2.provider.TokenGranter;
@@ -43,18 +44,23 @@ public class OAuth2Plugin extends AbstractPlugin<OAuth2Plugin> {
   }
 
   @Autowired
+  @Qualifier("oauth2-plugin.client-authentication-manager")
   private AuthenticationManager clientAuthenticationManager;
 
   @Autowired
+  @Qualifier("oauth2-plugin.client-details-service")
   private ClientDetailsService clientDetailsService;
 
   @Autowired
+  @Qualifier("oauth2-plugin.authentication-manager")
   private OAuth2AuthenticationManager oauth2AuthenticationManager;
 
-  @Autowired
+  // @Autowired
+  // @Qualifier("oauth2-plugin.token-granter")
   private TokenGranter tokenGranter;
 
   @Autowired
+  @Qualifier("oauth2-plugin.token-services")
   private AuthorizationServerTokenServices tokenServices;
 
   public OAuth2Plugin(Application application) {
@@ -79,5 +85,12 @@ public class OAuth2Plugin extends AbstractPlugin<OAuth2Plugin> {
 
   public AuthorizationServerTokenServices getTokenServices() {
     return tokenServices;
+  }
+
+  @Override
+  public void onStart() {
+    super.onStart();
+
+    tokenGranter = getApplicationContext().getBean(TokenGranter.class);
   }
 }

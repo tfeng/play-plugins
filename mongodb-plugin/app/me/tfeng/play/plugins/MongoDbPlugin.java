@@ -18,22 +18,21 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.avro;
+package me.tfeng.play.plugins;
 
-import org.apache.avro.Protocol;
-import org.apache.avro.Schema;
-import org.apache.avro.specific.SpecificData;
+import play.Application;
+import play.Play;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroHelper {
+public class MongoDbPlugin extends AbstractPlugin<MongoDbPlugin> {
 
-  public static Protocol getProtocol(Class<?> interfaceClass) {
-    return new SpecificData(interfaceClass.getClassLoader()).getProtocol(interfaceClass);
+  public static MongoDbPlugin getInstance() {
+    return Play.application().plugin(MongoDbPlugin.class);
   }
 
-  public static Schema getSchema(Class<?> schemaClass) {
-    return new SpecificData(schemaClass.getClassLoader()).getSchema(schemaClass);
+  public MongoDbPlugin(Application application) {
+    super(application);
   }
 }

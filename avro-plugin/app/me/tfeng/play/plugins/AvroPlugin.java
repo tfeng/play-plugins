@@ -20,10 +20,7 @@
 
 package me.tfeng.play.plugins;
 
-import java.util.Collections;
 import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Value;
 
 import play.Application;
 import play.Play;
@@ -39,9 +36,6 @@ public class AvroPlugin extends AbstractPlugin<AvroPlugin> {
 
   private Map<Class<?>, Object> protocolImplementations;
 
-  @Value("${avro-plugin.protocol-implementations:avroProtocolImplementations}")
-  private String protocolImplementationsName;
-
   public AvroPlugin(Application application) {
     super(application);
   }
@@ -54,7 +48,8 @@ public class AvroPlugin extends AbstractPlugin<AvroPlugin> {
   @SuppressWarnings("unchecked")
   public void onStart() {
     super.onStart();
-    protocolImplementations = Collections.<Class<?>, Object>unmodifiableMap(
-        getApplicationContext().getBean(protocolImplementationsName, Map.class));
+
+    protocolImplementations =
+        getApplicationContext().getBean("avro-plugin.protocol-implementations", Map.class);
   }
 }

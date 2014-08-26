@@ -30,7 +30,7 @@ object Avro extends AutoPlugin {
 
   override lazy val projectSettings = settings
 
-  lazy val settings = Seq(
+  lazy val settings = SbtAvro.settings ++ Seq(
       addSbtPlugin("me.tfeng.play-plugins" % "avro-plugin" % Versions.project)
-  ) ++ SbtAvro.settings
+  )
 }

@@ -24,7 +24,6 @@ import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,9 +59,6 @@ public class AvroD2Plugin extends AbstractPlugin<AvroD2Plugin> implements Watche
   private final Map<URI, AvroD2Client> clients = new HashMap<>();
 
   private Map<Class<?>, String> protocolPaths;
-
-  @Value("${avro-d2-plugin.protocol-paths:avroProtocolPaths}")
-  private String protocolPathsName;
 
   @Value("${avro-d2-plugin.server-host}")
   private String serverHost;
@@ -100,8 +96,7 @@ public class AvroD2Plugin extends AbstractPlugin<AvroD2Plugin> implements Watche
   public void onStart() {
     super.onStart();
 
-    protocolPaths = Collections.<Class<?>, String>unmodifiableMap(
-        getApplicationContext().getBean(protocolPathsName, Map.class));
+    protocolPaths = getApplicationContext().getBean("avro-d2-plugin.protocol-paths", Map.class);
 
     try {
       zk = new ZooKeeper(zkConnectString, zkSessionTimeout, this);
