@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "Arrays",
+  "fields": [
+    {
+      "name": "arrays",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": "int"
+          }
+        }
+      }
+    }
+  ]
+}

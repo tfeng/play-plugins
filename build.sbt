@@ -26,4 +26,4 @@ lazy val dust =
     project in file("dust-plugin") enablePlugins(PlayScala) dependsOn(spring)
 
 lazy val mongodb =
-    project in file("mongodb-plugin") enablePlugins(PlayJava) dependsOn(spring)
+    project in file("mongodb-plugin") enablePlugins(PlayJava) dependsOn(avro)

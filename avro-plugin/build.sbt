@@ -6,7 +6,10 @@ sbtPlugin := true
 
 Settings.common
 
-libraryDependencies += "org.apache.avro" % "avro-ipc" % Versions.avro
+libraryDependencies ++= Seq(
+  "org.apache.avro" % "avro-ipc" % Versions.avro,
+  "org.apache.httpcomponents" % "httpcore" % Versions.httpComponents
+)
 
 addSbtPlugin("me.tfeng.sbt-plugins" % "avro-plugin" % Versions.sbtPlugins)
 

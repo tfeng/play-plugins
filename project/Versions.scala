@@ -17,6 +17,8 @@ object Versions {
 
   val dustjs = "2.4.0-1"
 
+  val httpComponents = "4.3.2"
+
   val webJarsLocator = "0.17"
 
   val zookeeper = "3.4.6"

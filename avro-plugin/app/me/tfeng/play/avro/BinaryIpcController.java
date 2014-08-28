@@ -30,6 +30,7 @@ import me.tfeng.play.plugins.AvroPlugin;
 import org.apache.avro.ipc.InternalHttpTransceiver;
 import org.apache.avro.ipc.Responder;
 import org.apache.avro.ipc.specific.SpecificResponder;
+import org.apache.http.entity.ContentType;
 
 import play.Play;
 import play.mvc.BodyParser;
@@ -46,8 +47,9 @@ public class BinaryIpcController extends Controller {
 
   @BodyParser.Of(BodyParser.Raw.class)
   public static Result post(String protocol) throws Throwable {
-    String contentType = request().getHeader("content-type");
-    if (!CONTENT_TYPE.equals(contentType)) {
+    String contentTypeHeader = request().getHeader("content-type");
+    ContentType contentType = ContentType.parse(contentTypeHeader);
+    if (!CONTENT_TYPE.equals(contentType.getMimeType())) {
       throw new RuntimeException("Unable to handle content-type " + contentType + "; "
           + CONTENT_TYPE + " is expected");
     }

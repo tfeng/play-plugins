@@ -21,7 +21,6 @@
 package me.tfeng.play.avro;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -41,11 +40,8 @@ import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericDatumReader;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.DecoderFactory;
-import org.apache.avro.io.EncoderFactory;
-import org.apache.avro.io.JsonEncoder;
 import org.apache.avro.ipc.HandshakeResponse;
 import org.apache.avro.ipc.RPCContext;
 import org.apache.avro.ipc.Requestor;
@@ -55,9 +51,7 @@ import org.apache.avro.ipc.generic.GenericRequestor;
 import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.util.ByteBufferInputStream;
-import org.codehaus.jackson.JsonEncoding;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
+import org.apache.http.entity.ContentType;
 
 import play.Play;
 import play.libs.Json;
@@ -136,8 +130,9 @@ public class JsonIpcController extends Controller {
 
   @BodyParser.Of(BodyParser.Raw.class)
   public static Result post(String message, String protocol) throws Throwable {
-    String contentType = request().getHeader("content-type");
-    if (!CONTENT_TYPE.equals(contentType)) {
+    String contentTypeHeader = request().getHeader("content-type");
+    ContentType contentType = ContentType.parse(contentTypeHeader);
+    if (!CONTENT_TYPE.equals(contentType.getMimeType())) {
       throw new RuntimeException("Unable to handle content-type " + contentType + "; "
           + CONTENT_TYPE + " is expected");
     }
@@ -158,23 +153,11 @@ public class JsonIpcController extends Controller {
     try {
       Object response = getResponse(requestor, request, responseBuffers);
       return Results.ok(
-          convertJson(avroProtocol.getMessages().get(message).getResponse(), response));
+          AvroHelper.toJson(avroProtocol.getMessages().get(message).getResponse(), response));
     } catch (AvroRemoteException e) {
       Schema schema = avroProtocol.getMessages().get(message).getErrors();
-      return Results.badRequest(convertJson(schema, e.getValue()));
+      return Results.badRequest(AvroHelper.toJson(schema, e.getValue()));
     }
-  }
-
-  private static String convertJson(Schema schema, Object response) throws IOException {
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    GenericDatumWriter<Object> writer = new GenericDatumWriter<Object>(schema);
-    JsonGenerator generator =
-        new JsonFactory().createJsonGenerator(outputStream, JsonEncoding.UTF8);
-    generator.useDefaultPrettyPrinter();
-    JsonEncoder encoder = EncoderFactory.get().jsonEncoder(schema, generator);
-    writer.write(response, encoder);
-    encoder.flush();
-    return outputStream.toString();
   }
 
   @SuppressWarnings({ "rawtypes", "unchecked" })

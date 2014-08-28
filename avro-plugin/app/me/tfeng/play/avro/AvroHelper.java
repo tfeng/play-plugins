@@ -20,9 +20,20 @@
 
 package me.tfeng.play.avro;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+
 import org.apache.avro.Protocol;
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.io.JsonEncoder;
 import org.apache.avro.specific.SpecificData;
+import org.apache.avro.specific.SpecificDatumReader;
+import org.codehaus.jackson.JsonEncoding;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerator;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -35,5 +46,27 @@ public class AvroHelper {
 
   public static Schema getSchema(Class<?> schemaClass) {
     return new SpecificData(schemaClass.getClassLoader()).getSchema(schemaClass);
+  }
+
+  public static String toJson(Schema schema, Object object) throws IOException {
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    GenericDatumWriter<Object> writer = new GenericDatumWriter<Object>(schema);
+    JsonGenerator generator =
+        new JsonFactory().createJsonGenerator(outputStream, JsonEncoding.UTF8);
+    generator.useDefaultPrettyPrinter();
+    JsonEncoder encoder = EncoderFactory.get().jsonEncoder(schema, generator);
+    writer.write(object, encoder);
+    encoder.flush();
+    return outputStream.toString();
+  }
+
+  public static <T> T toRecord(Class<T> recordClass, String json) throws IOException {
+    SpecificDatumReader<T> reader = new SpecificDatumReader<>(recordClass);
+    return reader.read(null, DecoderFactory.get().jsonDecoder(getSchema(recordClass), json));
+  }
+
+  public static <T> T toRecord(Schema schema, String json) throws IOException {
+    SpecificDatumReader<T> reader = new SpecificDatumReader<>(schema);
+    return reader.read(null, DecoderFactory.get().jsonDecoder(schema, json));
   }
 }

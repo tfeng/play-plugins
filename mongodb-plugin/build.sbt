@@ -4,7 +4,4 @@ name := "mongodb-plugin"
 
 Settings.common
 
-libraryDependencies ++= Seq(
-  "org.apache.avro" % "avro-ipc" % Versions.avro,
-  "org.mongodb" % "mongo-java-driver" % Versions.mongoDb
-)
+libraryDependencies += "org.mongodb" % "mongo-java-driver" % Versions.mongoDb
