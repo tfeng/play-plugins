@@ -58,85 +58,6 @@ public class RecordConverter {
 
   private static final JsonNodeFactory NODE_FACTORY = new JsonNodeFactory(false);
 
-  public static DBObject toDbObject(IndexedRecord record) {
-    DBObject dbObject = new BasicDBObject();
-    Schema schema = record.getSchema();
-    for (Field field : schema.getFields()) {
-      Object value = record.get(field.pos());
-      dbObject.put(field.name(), getDbObject(value));
-    }
-
-    try {
-      for (java.lang.reflect.Field field : record.getClass().getFields()) {
-        if (String.class.isAssignableFrom(field.getType())) {
-          Id annotation = field.getAnnotation(Id.class);
-          if (annotation != null) {
-            dbObject.removeField(field.getName());
-            field.setAccessible(true);
-            String id = (String) field.get(record);
-            if (id != null) {
-              dbObject.put(annotation.value(), new ObjectId(id));
-            }
-          }
-        }
-      }
-    } catch (IllegalArgumentException | IllegalAccessException | SecurityException e) {
-      throw new RuntimeException("Unable to get id field of record " + record.getClass());
-    }
-
-    return dbObject;
-  }
-
-  @SuppressWarnings("unchecked")
-  private static Object getDbObject(Object object) {
-    if (object instanceof IndexedRecord) {
-      return toDbObject((IndexedRecord) object);
-    } else if (object instanceof Collection) {
-      return getDbObjects((Collection<Object>) object);
-    } else if (object instanceof Map) {
-      return getDbObjects((Map<Object, Object>) object);
-    } else if (object instanceof ByteBuffer) {
-      return new Binary(((ByteBuffer) object).array());
-    } else {
-      return object;
-    }
-  }
-
-  private static List<Object> getDbObjects(Collection<Object> collection) {
-    return collection.stream().map(object -> getDbObject(object)).collect(Collectors.toList());
-  }
-
-  private static Map<Object, Object> getDbObjects(Map<Object, Object> map) {
-    Map<Object, Object> newMap = new HashMap<>(map.size());
-    map.entrySet().forEach(entry -> newMap.put(entry.getKey(), getDbObject(entry.getValue())));
-    return newMap;
-  }
-
-  public static <T extends IndexedRecord> T toRecord(Class<T> recordClass, DBObject dbObject) {
-    mapIdFields(recordClass, dbObject);
-    Schema schema = new SpecificData(recordClass.getClassLoader()).getSchema(recordClass);
-    SpecificDatumReader<T> reader = new SpecificDatumReader<T>(recordClass);
-
-    if (LOG.isDebugEnabled()) {
-      JsonNode json = toAvroJson(schema, dbObject);
-      String jsonString = json.toString();
-      LOG.debug("Converted Avro json from MongoDB: ", jsonString);
-    }
-
-    T record;
-    try {
-      // Decoder decoder = new LoggingJsonDecoder(schema, jsonString);
-      // Decoder decoder = DecoderFactory.get().jsonDecoder(schema, jsonString);
-      Decoder decoder = new DBObjectDecoder(schema, dbObject);
-      record = reader.read(null, decoder);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to convert MongoDB object " + dbObject
-          + " into Avro record", e);
-    }
-
-    return record;
-  }
-
   @SuppressWarnings("unchecked")
   public static JsonNode toAvroJson(Schema schema, Object dbObject) {
     switch (schema.getType()) {
@@ -200,6 +121,85 @@ public class RecordConverter {
     default:
       throw new RuntimeException("Unknown Avro type " + schema.getType());
     }
+  }
+
+  public static DBObject toDbObject(IndexedRecord record) {
+    DBObject dbObject = new BasicDBObject();
+    Schema schema = record.getSchema();
+    for (Field field : schema.getFields()) {
+      Object value = record.get(field.pos());
+      dbObject.put(field.name(), getDbObject(value));
+    }
+
+    try {
+      for (java.lang.reflect.Field field : record.getClass().getFields()) {
+        if (String.class.isAssignableFrom(field.getType())) {
+          Id annotation = field.getAnnotation(Id.class);
+          if (annotation != null) {
+            dbObject.removeField(field.getName());
+            field.setAccessible(true);
+            String id = (String) field.get(record);
+            if (id != null) {
+              dbObject.put(annotation.value(), new ObjectId(id));
+            }
+          }
+        }
+      }
+    } catch (IllegalArgumentException | IllegalAccessException | SecurityException e) {
+      throw new RuntimeException("Unable to get id field of record " + record.getClass());
+    }
+
+    return dbObject;
+  }
+
+  public static <T extends IndexedRecord> T toRecord(Class<T> recordClass, DBObject dbObject) {
+    mapIdFields(recordClass, dbObject);
+    Schema schema = new SpecificData(recordClass.getClassLoader()).getSchema(recordClass);
+    SpecificDatumReader<T> reader = new SpecificDatumReader<T>(recordClass);
+
+    if (LOG.isDebugEnabled()) {
+      JsonNode json = toAvroJson(schema, dbObject);
+      String jsonString = json.toString();
+      LOG.debug("Converted Avro json from MongoDB: ", jsonString);
+    }
+
+    T record;
+    try {
+      // Decoder decoder = new LoggingJsonDecoder(schema, jsonString);
+      // Decoder decoder = DecoderFactory.get().jsonDecoder(schema, jsonString);
+      Decoder decoder = new DBObjectDecoder(schema, dbObject);
+      record = reader.read(null, decoder);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to convert MongoDB object " + dbObject
+          + " into Avro record", e);
+    }
+
+    return record;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Object getDbObject(Object object) {
+    if (object instanceof IndexedRecord) {
+      return toDbObject((IndexedRecord) object);
+    } else if (object instanceof Collection) {
+      return getDbObjects((Collection<Object>) object);
+    } else if (object instanceof Map) {
+      return getDbObjects((Map<Object, Object>) object);
+    } else if (object instanceof ByteBuffer) {
+      return new Binary(((ByteBuffer) object).array());
+    } else {
+      return object;
+    }
+  }
+
+  private static List<Object> getDbObjects(Collection<Object> collection) {
+    return collection.stream().map(object -> getDbObject(object)).collect(Collectors.toList());
+  }
+
+  private static Map<Object, Object> getDbObjects(Map<Object, Object> map) {
+    Map<Object, Object> newMap = new HashMap<>(map.size());
+    map.entrySet().forEach(entry -> newMap.put(entry.getKey(), getDbObject(entry.getValue())));
+    return newMap;
   }
 
   /**
