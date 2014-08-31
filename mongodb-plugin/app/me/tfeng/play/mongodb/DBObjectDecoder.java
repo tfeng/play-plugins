@@ -23,6 +23,7 @@ package me.tfeng.play.mongodb;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -33,8 +34,12 @@ import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.io.Decoder;
+import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
 import org.bson.types.Binary;
+
+import play.Logger;
+import play.Logger.ALogger;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -80,12 +85,15 @@ public class DBObjectDecoder extends Decoder {
 
     private final Iterator<Field> fieldIterator;
 
+    private Map<String, String> fieldNameMap;
+
     private final Map<String, Object> map;
 
     @SuppressWarnings("unchecked")
     public RecordIterator(Schema schema, Object object) {
       fieldIterator = schema.getFields().iterator();
       map = (Map<String, Object>) object;
+      initializeFieldNameMap(schema);
     }
 
     public Field getCurrentField() {
@@ -100,18 +108,53 @@ public class DBObjectDecoder extends Decoder {
     @Override
     public Object next() {
       currentField = fieldIterator.next();
-      return map.get(currentField.name());
+      String schemaFieldName = currentField.name();
+      String dbFieldName = fieldNameMap.get(schemaFieldName);
+      return map.get(dbFieldName == null ? schemaFieldName : dbFieldName);
+    }
+
+    private void initializeFieldNameMap(Schema schema) {
+      Class<?> recordClass = data.getClass(schema);
+      if (recordClass == null) {
+        LOG.warn("Unable to load class " + SpecificData.getClassName(schema)
+            + "; skipping java annotation processing");
+        fieldNameMap = Collections.emptyMap();
+      } else {
+        List<Field> fields = schema.getFields();
+        fieldNameMap = new HashMap<>(fields.size());
+        for (Field field : fields) {
+          String schemaFieldName = field.name();
+          String dbFieldName = RecordConverter.getFieldName(field);
+          if (!schemaFieldName.equals(dbFieldName)) {
+            fieldNameMap.put(schemaFieldName, dbFieldName);
+          }
+        }
+      }
     }
   }
 
+  private static final ALogger LOG = Logger.of(DBObjectDecoder.class);
+
   private static final Schema STRING_SCHEMA = Schema.create(Type.STRING);
 
-  private final Stack<Iterator<?>> iteratorStack = new Stack<>();
+  private final SpecificData data;
+
+  private final Stack<Iterator<Object>> iteratorStack = new Stack<>();
 
   private final Stack<Schema> schemaStack = new Stack<>();
 
-  public DBObjectDecoder(Schema schema, Object object) {
+  public DBObjectDecoder(Class<?> recordClass, Object object) {
     try {
+      data = new SpecificData(recordClass.getClassLoader());
+      pushToStacks(data.getSchema(recordClass), object);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to initialize decoder", e);
+    }
+  }
+
+  public DBObjectDecoder(Schema schema, Object object, ClassLoader classLoader) {
+    try {
+      data = new SpecificData(classLoader);
       pushToStacks(schema, object);
     } catch (IOException e) {
       throw new RuntimeException("Unable to initialize decoder", e);
@@ -195,18 +238,13 @@ public class DBObjectDecoder extends Decoder {
 
   @Override
   public void readFixed(byte[] bytes, int start, int length) throws IOException {
-    jumpToNextField();
-    try {
-      Binary binary = (Binary) iteratorStack.peek().next();
-      byte[] data = binary.getData();
-      if (data.length != length) {
-        throw new IOException("Binary data of length " + length + " is expected; actual length is "
-            + data.length);
-      }
-      System.arraycopy(data, 0, bytes, start, length);
-    } finally {
-      finishRead();
+    ByteBuffer buffer = readBytes(null);
+    byte[] data = buffer.array();
+    if (data.length != length) {
+      throw new IOException("Binary data of length " + length + " is expected; actual length is "
+          + data.length);
     }
+    System.arraycopy(data, 0, bytes, start, length);
   }
 
   @Override
@@ -258,7 +296,12 @@ public class DBObjectDecoder extends Decoder {
   public long readLong() throws IOException {
     jumpToNextField();
     try {
-      return ((Number) iteratorStack.peek().next()).longValue();
+      Object object = iteratorStack.peek().next();
+      if (object instanceof Number) {
+        return ((Number) object).longValue();
+      } else {
+        return MongoDbTypeConverter.convertFromMongoDbType(Long.class, object);
+      }
     } finally {
       finishRead();
     }
@@ -286,7 +329,7 @@ public class DBObjectDecoder extends Decoder {
   public String readString() throws IOException {
     jumpToNextField();
     try {
-      return (String) iteratorStack.peek().next();
+      return MongoDbTypeConverter.convertFromMongoDbType(String.class, iteratorStack.peek().next());
     } finally {
       finishRead();
     }
@@ -294,7 +337,8 @@ public class DBObjectDecoder extends Decoder {
 
   @Override
   public Utf8 readString(Utf8 old) throws IOException {
-    return new Utf8(readString());
+    String string = readString();
+    return string == null ? null : old == null ? new Utf8(string) : old.set(string);
   }
 
   @Override

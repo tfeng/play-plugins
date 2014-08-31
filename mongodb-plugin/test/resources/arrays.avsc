@@ -1,6 +1,7 @@
 {
   "type": "record",
   "name": "Arrays",
+  "namespace": "test",
   "fields": [
     {
       "name": "arrays",

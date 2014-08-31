@@ -1,6 +1,7 @@
 {
   "type": "record",
   "name": "Maps",
+  "namespace": "test",
   "fields": [
     {
       "name": "maps",

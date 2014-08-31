@@ -1,6 +1,7 @@
 {
   "type": "record",
   "name": "Records",
+  "namespace": "test",
   "fields": [
     {
       "name": "record1",

@@ -31,15 +31,13 @@ import java.util.stream.Collectors;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
+import org.apache.avro.generic.GenericData.Record;
+import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.avro.io.Decoder;
-import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.bson.types.Binary;
-import org.bson.types.ObjectId;
-
-import play.Logger;
-import play.Logger.ALogger;
+import org.mortbay.util.ajax.JSON;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -54,7 +52,9 @@ import com.mongodb.DBObject;
  */
 public class RecordConverter {
 
-  private static final ALogger LOG = Logger.of(RecordConverter.class);
+  public static final String MONGO_CLASS_PROPERTY = "mongo-class";
+
+  public static final String MONGO_NAME_PROPERTY = "mongo-name";
 
   private static final JsonNodeFactory NODE_FACTORY = new JsonNodeFactory(false);
 
@@ -128,95 +128,84 @@ public class RecordConverter {
     Schema schema = record.getSchema();
     for (Field field : schema.getFields()) {
       Object value = record.get(field.pos());
-      dbObject.put(field.name(), getDbObject(value));
-    }
-
-    try {
-      for (java.lang.reflect.Field field : record.getClass().getFields()) {
-        if (String.class.isAssignableFrom(field.getType())) {
-          Id annotation = field.getAnnotation(Id.class);
-          if (annotation != null) {
-            dbObject.removeField(field.getName());
-            field.setAccessible(true);
-            String id = (String) field.get(record);
-            if (id != null) {
-              dbObject.put(annotation.value(), new ObjectId(id));
-            }
-          }
-        }
+      if (value != null) {
+        dbObject.put(getFieldName(field), getDbObject(field.schema(), value));
       }
-    } catch (IllegalArgumentException | IllegalAccessException | SecurityException e) {
-      throw new RuntimeException("Unable to get id field of record " + record.getClass());
     }
-
     return dbObject;
   }
 
   public static <T extends IndexedRecord> T toRecord(Class<T> recordClass, DBObject dbObject) {
-    mapIdFields(recordClass, dbObject);
-    Schema schema = new SpecificData(recordClass.getClassLoader()).getSchema(recordClass);
     SpecificDatumReader<T> reader = new SpecificDatumReader<T>(recordClass);
-
-    if (LOG.isDebugEnabled()) {
-      JsonNode json = toAvroJson(schema, dbObject);
-      String jsonString = json.toString();
-      LOG.debug("Converted Avro json from MongoDB: ", jsonString);
-    }
-
-    T record;
     try {
-      // Decoder decoder = new LoggingJsonDecoder(schema, jsonString);
-      // Decoder decoder = DecoderFactory.get().jsonDecoder(schema, jsonString);
-      Decoder decoder = new DBObjectDecoder(schema, dbObject);
-      record = reader.read(null, decoder);
+      Decoder decoder = new DBObjectDecoder(recordClass, dbObject);
+      return reader.read(null, decoder);
     } catch (IOException e) {
       throw new RuntimeException("Unable to convert MongoDB object " + dbObject
           + " into Avro record", e);
     }
+  }
 
-    return record;
+  public static Record toRecord(Schema schema, DBObject object, ClassLoader classLoader)
+      throws IOException {
+    GenericDatumReader<Record> reader = new GenericDatumReader<>(schema);
+    return reader.read(null, new DBObjectDecoder(schema, object, classLoader));
+  }
+
+  protected static String getFieldName(Field field) {
+    String mongoName = field.getProp(MONGO_NAME_PROPERTY);
+    if (mongoName != null) {
+      return mongoName;
+    } else {
+      return field.name();
+    }
   }
 
   @SuppressWarnings("unchecked")
-  private static Object getDbObject(Object object) {
-    if (object instanceof IndexedRecord) {
+  private static Object getDbObject(Schema schema, Object object) {
+    if (object == null) {
+      return null;
+    } else if (object instanceof IndexedRecord) {
       return toDbObject((IndexedRecord) object);
     } else if (object instanceof Collection) {
-      return getDbObjects((Collection<Object>) object);
+      return getDbObjects(schema, (Collection<Object>) object);
     } else if (object instanceof Map) {
-      return getDbObjects((Map<Object, Object>) object);
+      return getDbObjects(schema, (Map<String, Object>) object);
     } else if (object instanceof ByteBuffer) {
       return new Binary(((ByteBuffer) object).array());
     } else {
-      return object;
-    }
-  }
-
-  private static List<Object> getDbObjects(Collection<Object> collection) {
-    return collection.stream().map(object -> getDbObject(object)).collect(Collectors.toList());
-  }
-
-  private static Map<Object, Object> getDbObjects(Map<Object, Object> map) {
-    Map<Object, Object> newMap = new HashMap<>(map.size());
-    map.entrySet().forEach(entry -> newMap.put(entry.getKey(), getDbObject(entry.getValue())));
-    return newMap;
-  }
-
-  /**
-   * Look for all annotated id fields in the record class, and set the ids in the object. A common
-   * use case is that "id" field of the class may be mapped to "_id" in the object.
-   */
-  private static <T extends IndexedRecord> void mapIdFields(Class<T> recordClass, DBObject object) {
-    for (java.lang.reflect.Field field : recordClass.getFields()) {
-      if (String.class.isAssignableFrom(field.getType())) {
-        Id annotation = field.getAnnotation(Id.class);
-        if (annotation != null) {
-          Object id = object.get(annotation.value());
-          if (id != null) {
-            object.put(field.getName(), id.toString());
+      String mongoClassName = schema.getProp(MONGO_CLASS_PROPERTY);
+      if (mongoClassName == null) {
+        return object;
+      } else {
+        try {
+          Class<?> mongoClass = schema.getClass().getClassLoader().loadClass(mongoClassName);
+          if (object instanceof CharSequence) {
+            if (mongoClass.isAssignableFrom(Object.class)) {
+              return JSON.parse(((CharSequence) object).toString());
+            } else {
+              return MongoDbTypeConverter.convertToMongoDbType(mongoClass,
+                  ((CharSequence) object).toString());
+            }
+          } else {
+            return MongoDbTypeConverter.convertToMongoDbType(mongoClass, object);
           }
+        } catch (ClassNotFoundException e) {
+          throw new RuntimeException("Unable to load mongo-class " + mongoClassName, e);
         }
       }
     }
+  }
+
+  private static List<Object> getDbObjects(Schema schema, Collection<Object> collection) {
+    return collection.stream().map(object -> getDbObject(schema.getElementType(), object))
+        .collect(Collectors.toList());
+  }
+
+  private static Map<String, Object> getDbObjects(Schema schema, Map<String, Object> map) {
+    Map<String, Object> newMap = new HashMap<>(map.size());
+    map.entrySet().forEach(
+        entry -> newMap.put(entry.getKey(), getDbObject(schema.getValueType(), entry.getValue())));
+    return newMap;
   }
 }

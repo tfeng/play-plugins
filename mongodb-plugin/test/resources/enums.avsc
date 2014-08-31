@@ -1,6 +1,7 @@
 {
   "type": "record",
   "name": "Enums",
+  "namespace": "test",
   "fields": [
     {
       "name": "enum1",

@@ -22,27 +22,34 @@ import static org.fest.assertions.Assertions.assertThat;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 import me.tfeng.play.avro.AvroHelper;
-import me.tfeng.play.mongodb.DBObjectDecoder;
+import me.tfeng.play.mongodb.MongoDbTypeConverter;
+import me.tfeng.play.mongodb.RecordConverter;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData.Record;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.avro.io.Decoder;
-import org.apache.avro.io.LoggingJsonDecoder;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.specific.SpecificDatumReader;
+import org.bson.types.BSONTimestamp;
 import org.bson.types.Binary;
+import org.bson.types.ObjectId;
 import org.junit.Test;
 
 import play.libs.Json;
+import test.Ids;
+import test.Names;
+import test.Types;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.util.JSON;
-
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -61,7 +68,7 @@ public class TestDBObjectDecoder {
 
     String json = "{\"arrays\": [[[1, 2, 3], []], [[4], []], [[]]]}";
     DBObject object = (DBObject) JSON.parse(json);
-    Record record2 = toRecord(schema, object);
+    Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     assertThat(record2).isEqualTo(record1);
     assertThat(AvroHelper.toJson(schema, record2)).isEqualTo(AvroHelper.toJson(schema, record1));
@@ -76,7 +83,7 @@ public class TestDBObjectDecoder {
 
     String json = "{}";
     DBObject object = (DBObject) JSON.parse(json);
-    Record record2 = toRecord(schema, object);
+    Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     assertThat(record2).isEqualTo(record1);
     assertThat(AvroHelper.toJson(schema, record2)).isEqualTo(AvroHelper.toJson(schema, record1));
@@ -86,17 +93,48 @@ public class TestDBObjectDecoder {
   public void testEnums() throws Exception {
     Schema schema = getSchema("enums.avsc");
 
-    String avroJson = "{\"enum1\": \"X\", \"enum2\": {\"Enum2\": \"A\"}, \"enum3\": {\"null\": null}, \"enum4\": [{\"Enum4\": \"SAT\"}, {\"Enum4\": \"SUN\"}]}}";
-    Decoder decoder = new LoggingJsonDecoder(schema, avroJson);
+    String avroJson = "{\"enum1\": \"X\", \"enum2\": {\"test.Enum2\": \"A\"}, \"enum3\": {\"null\": null}, \"enum4\": [{\"test.Enum4\": \"SAT\"}, {\"test.Enum4\": \"SUN\"}]}}";
+    Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
     GenericDatumReader<Record> reader = new GenericDatumReader<Record>(schema);
     Record record1 = reader.read(null, decoder);
 
     String mongoJson = "{\"enum1\": \"X\", \"enum2\": \"A\", \"enum3\": null, \"enum4\": [\"SAT\", \"SUN\"]}}";
     DBObject object = (DBObject) JSON.parse(mongoJson);
-    Record record2 = toRecord(schema, object);
+    Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     assertThat(record2).isEqualTo(record1);
     assertThat(AvroHelper.toJson(schema, record2)).isEqualTo(AvroHelper.toJson(schema, record1));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testIds() throws Exception {
+    Schema schema = getSchema("ids.avsc");
+
+    String avroJson = "{\"id\": \"5401bf578de2a77380c5489a\", \"nested\": {\"id\": \"6401bf578de2a77380c5489a\"}}";
+    Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
+    SpecificDatumReader<Ids> reader = new SpecificDatumReader<Ids>(schema);
+    Ids ids1 = reader.read(null, decoder);
+
+    DBObject object = new BasicDBObject();
+    object.put("_id", new ObjectId("5401bf578de2a77380c5489a"));
+    object.put("nested", new BasicDBObject("_id", new ObjectId("6401bf578de2a77380c5489a")));
+    Ids ids2 = RecordConverter.toRecord(Ids.class, object);
+
+    assertThat(ids1.getId().toString()).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(ids2.getId().toString()).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(ids1.getNested().getId().toString()).isEqualTo("6401bf578de2a77380c5489a");
+    assertThat(ids2.getNested().getId().toString()).isEqualTo("6401bf578de2a77380c5489a");
+
+    DBObject object1 = RecordConverter.toDbObject(ids1);
+    DBObject object2 = RecordConverter.toDbObject(ids2);
+
+    assertThat(object1.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
+    assertThat(object2.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
+    assertThat(((Map<String, Object>) object1.get("nested")).get("_id"))
+        .isEqualTo(new ObjectId("6401bf578de2a77380c5489a"));
+    assertThat(((Map<String, Object>) object2.get("nested")).get("_id"))
+        .isEqualTo(new ObjectId("6401bf578de2a77380c5489a"));
   }
 
   @Test
@@ -110,11 +148,41 @@ public class TestDBObjectDecoder {
 
     String json = "{\"maps\": {\"key1\": {\"value1\": 1, \"value2\": 2}, \"key2\": {}, \"key3\": {\"value3\": 3}}}";
     DBObject object = (DBObject) JSON.parse(json);
-    Record record2 = toRecord(schema, object);
+    Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     // Convert into JsonNode before comparison, so the maps equal even if keys are reordered.
     assertThat((Object) Json.parse(AvroHelper.toJson(schema, record2)))
         .isEqualTo(Json.parse(AvroHelper.toJson(schema, record1)));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testNames() throws Exception {
+    Schema schema = getSchema("names.avsc");
+
+    String avroJson = "{\"id\": \"5401bf578de2a77380c5489a\", \"nested\": {\"id\": \"5401bf578de2a77380c5489b\"}}";
+    Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
+    SpecificDatumReader<Names> reader = new SpecificDatumReader<Names>(schema);
+    Names names1 = reader.read(null, decoder);
+
+    String mongoJson = "{\"_id\": \"5401bf578de2a77380c5489a\", \"nested\": {\"_id\": \"5401bf578de2a77380c5489b\"}}";
+    DBObject object = (DBObject) JSON.parse(mongoJson);
+    Names names2 = RecordConverter.toRecord(Names.class, object);
+
+    assertThat(names1.getId().toString()).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(names2.getId().toString()).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(names1.getNested().getId().toString()).isEqualTo("5401bf578de2a77380c5489b");
+    assertThat(names2.getNested().getId().toString()).isEqualTo("5401bf578de2a77380c5489b");
+
+    DBObject object1 = RecordConverter.toDbObject(names1);
+    DBObject object2 = RecordConverter.toDbObject(names2);
+
+    assertThat(object1.get("_id").toString()).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(object2.get("_id").toString()).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(((Map<String, Object>) object1.get("nested")).get("_id").toString())
+        .isEqualTo("5401bf578de2a77380c5489b");
+    assertThat(((Map<String, Object>) object2.get("nested")).get("_id").toString())
+        .isEqualTo("5401bf578de2a77380c5489b");
   }
 
   @Test
@@ -141,7 +209,7 @@ public class TestDBObjectDecoder {
     object.put("d", 4.2);
     object.put("n", null);
     object.put("by", new Binary("This is a string in bytes".getBytes()));
-    Record record2 = toRecord(schema, object);
+    Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     assertThat(record2).isEqualTo(record1);
     assertThat(AvroHelper.toJson(schema, record2)).isEqualTo(AvroHelper.toJson(schema, record1));
@@ -174,24 +242,78 @@ public class TestDBObjectDecoder {
 
     String json = "{\"record1\": {\"i\": 1}, \"record2\": {\"l\": 2, \"record21\": {\"s\": \"This is a string\"}}, \"record3\": {\"record31\": {\"f\": 3.1, \"record311\": {\"d\": 4.2}}, \"record32\": {\"b\": true}}}";
     DBObject object = (DBObject) JSON.parse(json);
-    Record record2 = toRecord(schema, object);
+    Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     assertThat(record2).isEqualTo(record1);
     assertThat(AvroHelper.toJson(schema, record2)).isEqualTo(AvroHelper.toJson(schema, record1));
   }
 
   @Test
+  public void testTypes() throws Exception {
+    Schema schema = getSchema("types.avsc");
+    DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
+    String mongoString = JSON.serialize(mongoObject);
+
+    String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31 17:09:34.033\", \"date2\": 1409476174033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
+    Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
+    SpecificDatumReader<Types> reader = new SpecificDatumReader<Types>(schema);
+    Types types1 = reader.read(null, decoder);
+
+    DBObject object = new BasicDBObject();
+    object.put("_id", new ObjectId("5401bf578de2a77380c5489a"));
+    object.put("bsonTimestamp1", new BSONTimestamp(1409385948, 1));
+    object.put("bsonTimestamp2", new BSONTimestamp(1409385948, 1));
+    object.put("date1", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    object.put("date2", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    object.put("mongoString", mongoObject);
+    Types types2 = RecordConverter.toRecord(Types.class, object);
+
+    assertThat(types1.getObjectId().toString()).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(types2.getObjectId().toString()).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(types1.getBsonTimestamp1().toString()).isEqualTo("(1409385948, 1)");
+    assertThat(types2.getBsonTimestamp1().toString()).isEqualTo("(1409385948, 1)");
+    assertThat(types1.getBsonTimestamp2()).isEqualTo(1409385948001l);
+    assertThat(types2.getBsonTimestamp2()).isEqualTo(1409385948001l);
+    assertThat(types1.getDate1().toString()).isEqualTo("2014-08-31 17:09:34.033");
+    assertThat(types2.getDate1().toString()).isEqualTo("2014-08-31 17:09:34.033");
+    assertThat(types1.getDate2()).isEqualTo(1409476174033l);
+    assertThat(types2.getDate2()).isEqualTo(1409476174033l);
+    assertThat(types1.getMongoString().toString()).isEqualTo(mongoString);
+    assertThat(types2.getMongoString().toString()).isEqualTo(mongoString);
+
+    DBObject object1 = RecordConverter.toDbObject(types1);
+    DBObject object2 = RecordConverter.toDbObject(types2);
+
+    assertThat(object1.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
+    assertThat(object2.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
+    assertThat(object1.get("bsonTimestamp1")).isEqualTo(new BSONTimestamp(1409385948, 1));
+    assertThat(object2.get("bsonTimestamp1")).isEqualTo(new BSONTimestamp(1409385948, 1));
+    assertThat(object1.get("bsonTimestamp2")).isEqualTo(new BSONTimestamp(1409385948, 1));
+    assertThat(object2.get("bsonTimestamp2")).isEqualTo(new BSONTimestamp(1409385948, 1));
+    assertThat(object1.get("date1")).isEqualTo(
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    assertThat(object2.get("date1")).isEqualTo(
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    assertThat(object1.get("date2")).isEqualTo(
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    assertThat(object2.get("date2")).isEqualTo(
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    assertThat(object1.get("mongoString")).isEqualTo(mongoObject);
+    assertThat(object2.get("mongoString")).isEqualTo(mongoObject);
+  }
+
+  @Test
   public void testUnions() throws Exception {
     Schema schema = getSchema("unions.avsc");
 
-    String avroJson = "{\"union1\": {\"int\": 1}, \"union2\": {\"Union2\": {\"union21\": {\"long\": 2}}}, \"union3\": {\"array\": [{\"boolean\": true}, {\"boolean\": false}, {\"null\": null}]}, \"union4\": {\"map\": {\"a\": {\"string\": \"A\"}, \"b\": {\"string\": \"B\"}, \"c\": {\"string\": \"C\"}}}, \"union5\": {\"null\": null}, \"union6\": {\"null\": null}}";
-    Decoder decoder = new LoggingJsonDecoder(schema, avroJson);
+    String avroJson = "{\"union1\": {\"int\": 1}, \"union2\": {\"test.Union2\": {\"union21\": {\"long\": 2}}}, \"union3\": {\"array\": [{\"boolean\": true}, {\"boolean\": false}, {\"null\": null}]}, \"union4\": {\"map\": {\"a\": {\"string\": \"A\"}, \"b\": {\"string\": \"B\"}, \"c\": {\"string\": \"C\"}}}, \"union5\": {\"null\": null}, \"union6\": {\"null\": null}}";
+    Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
     GenericDatumReader<Record> reader = new GenericDatumReader<Record>(schema);
     Record record1 = reader.read(null, decoder);
 
     String mongoJson = "{\"union1\": 1, \"union2\": {\"union21\": 2}, \"union3\": [true, false, null], \"union4\": {\"a\": \"A\", \"b\": \"B\", \"c\": \"C\"}, \"union5\": null, \"union6\": null}";
     DBObject object = (DBObject) JSON.parse(mongoJson);
-    Record record2 = toRecord(schema, object);
+    Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     assertThat(record2).isEqualTo(record1);
     assertThat(AvroHelper.toJson(schema, record2)).isEqualTo(AvroHelper.toJson(schema, record1));
@@ -200,10 +322,5 @@ public class TestDBObjectDecoder {
   private Schema getSchema(String name) throws IOException {
     InputStream schemaStream = getClass().getClassLoader().getResourceAsStream(name);
     return new Schema.Parser().parse(schemaStream);
-  }
-
-  private Record toRecord(Schema schema, DBObject object) throws IOException {
-    GenericDatumReader<Record> reader = new GenericDatumReader<>(schema);
-    return reader.read(null, new DBObjectDecoder(schema, object));
   }
 }

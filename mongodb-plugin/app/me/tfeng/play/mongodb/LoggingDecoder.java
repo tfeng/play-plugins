@@ -18,13 +18,12 @@
  * limitations under the License.
  */
 
-package org.apache.avro.io;
+package me.tfeng.play.mongodb;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.avro.Schema;
+import org.apache.avro.io.Decoder;
 import org.apache.avro.util.Utf8;
 
 import play.Logger;
@@ -33,157 +32,155 @@ import play.Logger.ALogger;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class LoggingJsonDecoder extends JsonDecoder {
+public class LoggingDecoder extends Decoder {
 
-  private static final ALogger LOG = Logger.of(LoggingJsonDecoder.class);
+  private static final ALogger LOG = Logger.of(LoggingDecoder.class);
 
-  public LoggingJsonDecoder(Schema schema, InputStream in) throws IOException {
-    super(schema, in);
-  }
+  private final Decoder decoder;
 
-  public LoggingJsonDecoder(Schema schema, String in) throws IOException {
-    super(schema, in);
+  public LoggingDecoder(Decoder decoder) throws IOException {
+    this.decoder = decoder;
   }
 
   @Override
   public long arrayNext() throws IOException {
-    long result = super.arrayNext();
+    long result = decoder.arrayNext();
     LOG.info("arrayNext() = " + result);
     return result;
   }
 
   @Override
   public long mapNext() throws IOException {
-    long result = super.mapNext();
+    long result = decoder.mapNext();
     LOG.info("mapNext() = " + result);
     return result;
   }
 
   @Override
   public long readArrayStart() throws IOException {
-    long result = super.readArrayStart();
+    long result = decoder.readArrayStart();
     LOG.info("readArrayStart() = " + result);
     return result;
   }
 
   @Override
   public boolean readBoolean() throws IOException {
-    boolean result = super.readBoolean();
+    boolean result = decoder.readBoolean();
     LOG.info("readBoolean() = " + result);
     return result;
   }
 
   @Override
   public ByteBuffer readBytes(ByteBuffer old) throws IOException {
-    ByteBuffer result = super.readBytes(old);
+    ByteBuffer result = decoder.readBytes(old);
     LOG.info("readBytes(...) = ...");
     return result;
   }
 
   @Override
   public double readDouble() throws IOException {
-    double result = super.readDouble();
+    double result = decoder.readDouble();
     LOG.info("readDouble() = " + result);
     return result;
   }
 
   @Override
   public int readEnum() throws IOException {
-    int result = super.readEnum();
+    int result = decoder.readEnum();
     LOG.info("readEnum() = " + result);
     return result;
   }
 
   @Override
   public void readFixed(byte[] bytes, int start, int length) throws IOException {
-    super.readFixed(bytes, start, length);
+    decoder.readFixed(bytes, start, length);
     LOG.info("readFixed(..., " + start + ", " + length + ")");
   }
 
   @Override
   public float readFloat() throws IOException {
-    float result = super.readFloat();
+    float result = decoder.readFloat();
     LOG.info("readFloat() = " + result);
     return result;
   }
 
   @Override
   public int readIndex() throws IOException {
-    int result = super.readIndex();
+    int result = decoder.readIndex();
     LOG.info("readIndex() = " + result);
     return result;
   }
 
   @Override
   public int readInt() throws IOException {
-    int result = super.readInt();
+    int result = decoder.readInt();
     LOG.info("readInt() = " + result);
     return result;
   }
 
   @Override
   public long readLong() throws IOException {
-    long result = super.readLong();
+    long result = decoder.readLong();
     LOG.info("readLong() = " + result);
     return result;
   }
 
   @Override
   public long readMapStart() throws IOException {
-    long result = super.readMapStart();
+    long result = decoder.readMapStart();
     LOG.info("readMapStart() = " + result);
     return result;
   }
 
   @Override
   public void readNull() throws IOException {
-    super.readNull();
+    decoder.readNull();
     LOG.info("readNull()");
   }
 
   @Override
   public String readString() throws IOException {
-    String result = super.readString();
+    String result = decoder.readString();
     LOG.info("readString() = " + result);
     return result;
   }
 
   @Override
   public Utf8 readString(Utf8 old) throws IOException {
-    Utf8 result = super.readString(old);
+    Utf8 result = decoder.readString(old);
     LOG.info("readString(" + old + ") = " + result);
     return result;
   }
 
   @Override
   public long skipArray() throws IOException {
-    long result = super.skipArray();
+    long result = decoder.skipArray();
     LOG.info("skipArray() = " + result);
     return result;
   }
 
   @Override
   public void skipBytes() throws IOException {
-    super.skipBytes();
+    decoder.skipBytes();
     LOG.info("skipBytes()");
   }
 
   @Override
   public void skipFixed(int length) throws IOException {
-    super.skipFixed(length);
+    decoder.skipFixed(length);
     LOG.info("skipFixed(" + length + ")");
   }
 
   @Override
   public long skipMap() throws IOException {
-    long result = super.skipMap();
+    long result = decoder.skipMap();
     LOG.info("skipMap() = " + result);
     return result;
   }
 
   @Override
   public void skipString() throws IOException {
-    super.skipString();
+    decoder.skipString();
     LOG.info("skipString()");
   }
 }

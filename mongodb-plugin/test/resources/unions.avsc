@@ -1,6 +1,7 @@
 {
   "type": "record",
   "name": "Unions",
+  "namespace": "test",
   "fields": [
     {
       "name": "union1",
