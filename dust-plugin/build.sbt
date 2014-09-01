@@ -7,7 +7,7 @@ sbtPlugin := true
 Settings.common
 
 libraryDependencies ++= Seq(
-  "org.webjars" % "webjars-locator" % Versions.webJarsLocator,
+  "org.webjars" % "webjars-locator" % Versions.webjarsLocator,
   "org.webjars" % "dustjs-linkedin" % Versions.dustjs
 )
 
