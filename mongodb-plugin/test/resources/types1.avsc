@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "Types",
+  "name": "Types1",
   "namespace": "test",
   "fields": [
     {

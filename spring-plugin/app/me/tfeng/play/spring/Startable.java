@@ -18,34 +18,14 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.plugins;
-
-import java.util.List;
-import java.util.stream.Collectors;
-
-import me.tfeng.play.mongodb.OplogListener;
-import me.tfeng.play.spring.Startable;
-import play.Application;
-import play.Play;
+package me.tfeng.play.spring;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class MongoDbPlugin extends StartablePlugin<MongoDbPlugin> {
+public interface Startable {
 
-  public static MongoDbPlugin getInstance() {
-    return Play.application().plugin(MongoDbPlugin.class);
-  }
+  public void onStart() throws Throwable;
 
-  public MongoDbPlugin(Application application) {
-    super(application);
-  }
-
-  @Override
-  protected List<Startable> getStartables() {
-    return getApplicationContext().getBeansOfType(OplogListener.class).entrySet().stream()
-        .sorted((entry1, entry2) -> entry1.getKey().compareTo(entry2.getKey()))
-        .map(entry -> entry.getValue())
-        .collect(Collectors.toList());
-  }
+  public void onStop() throws Throwable;
 }

@@ -56,6 +56,8 @@ public class RecordConverter {
 
   public static final String MONGO_NAME_PROPERTY = "mongo-name";
 
+  public static final String MONGO_TYPE_PROPERTY = "mongo-type";
+
   private static final JsonNodeFactory NODE_FACTORY = new JsonNodeFactory(false);
 
   @SuppressWarnings("unchecked")
@@ -175,18 +177,25 @@ public class RecordConverter {
       return new Binary(((ByteBuffer) object).array());
     } else {
       String mongoClassName = schema.getProp(MONGO_CLASS_PROPERTY);
-      if (mongoClassName == null) {
+      String mongoType = schema.getProp(MONGO_TYPE_PROPERTY);
+      if (object instanceof CharSequence) {
+        object = ((CharSequence) object).toString();
+      }
+      if (mongoClassName == null && mongoType == null) {
         return object;
+      } else if (mongoClassName != null && mongoType != null) {
+        throw new RuntimeException("mongo-class and mongo-type should not be both specified: "
+            + schema);
       } else {
         try {
-          Class<?> mongoClass = schema.getClass().getClassLoader().loadClass(mongoClassName);
-          if (object instanceof CharSequence) {
-            if (mongoClass.isAssignableFrom(Object.class)) {
-              return JSON.parse(((CharSequence) object).toString());
-            } else {
-              return MongoDbTypeConverter.convertToMongoDbType(mongoClass,
-                  ((CharSequence) object).toString());
-            }
+          Class<?> mongoClass;
+          if (mongoClassName != null) {
+            mongoClass = schema.getClass().getClassLoader().loadClass(mongoClassName);
+          } else {
+            mongoClass = MongoType.valueOf(mongoType).getMongoClass();
+          }
+          if (object instanceof String && mongoClass.isAssignableFrom(Object.class)) {
+            return JSON.parse((String) object);
           } else {
             return MongoDbTypeConverter.convertToMongoDbType(mongoClass, object);
           }

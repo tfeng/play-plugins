@@ -43,7 +43,8 @@ import org.junit.Test;
 import play.libs.Json;
 import test.Ids;
 import test.Names;
-import test.Types;
+import test.Types1;
+import test.Types2;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -177,11 +178,11 @@ public class TestDBObjectDecoder {
     DBObject object1 = RecordConverter.toDbObject(names1);
     DBObject object2 = RecordConverter.toDbObject(names2);
 
-    assertThat(object1.get("_id").toString()).isEqualTo("5401bf578de2a77380c5489a");
-    assertThat(object2.get("_id").toString()).isEqualTo("5401bf578de2a77380c5489a");
-    assertThat(((Map<String, Object>) object1.get("nested")).get("_id").toString())
+    assertThat(object1.get("_id")).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(object2.get("_id")).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(((Map<String, Object>) object1.get("nested")).get("_id"))
         .isEqualTo("5401bf578de2a77380c5489b");
-    assertThat(((Map<String, Object>) object2.get("nested")).get("_id").toString())
+    assertThat(((Map<String, Object>) object2.get("nested")).get("_id"))
         .isEqualTo("5401bf578de2a77380c5489b");
   }
 
@@ -249,15 +250,15 @@ public class TestDBObjectDecoder {
   }
 
   @Test
-  public void testTypes() throws Exception {
-    Schema schema = getSchema("types.avsc");
+  public void testTypes1() throws Exception {
+    Schema schema = getSchema("types1.avsc");
     DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
     String mongoString = JSON.serialize(mongoObject);
 
     String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31 17:09:34.033\", \"date2\": 1409476174033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
-    SpecificDatumReader<Types> reader = new SpecificDatumReader<Types>(schema);
-    Types types1 = reader.read(null, decoder);
+    SpecificDatumReader<Types1> reader = new SpecificDatumReader<Types1>(schema);
+    Types1 types1 = reader.read(null, decoder);
 
     DBObject object = new BasicDBObject();
     object.put("_id", new ObjectId("5401bf578de2a77380c5489a"));
@@ -266,7 +267,61 @@ public class TestDBObjectDecoder {
     object.put("date1", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
     object.put("date2", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
     object.put("mongoString", mongoObject);
-    Types types2 = RecordConverter.toRecord(Types.class, object);
+    Types1 types2 = RecordConverter.toRecord(Types1.class, object);
+
+    assertThat(types1.getObjectId().toString()).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(types2.getObjectId().toString()).isEqualTo("5401bf578de2a77380c5489a");
+    assertThat(types1.getBsonTimestamp1().toString()).isEqualTo("(1409385948, 1)");
+    assertThat(types2.getBsonTimestamp1().toString()).isEqualTo("(1409385948, 1)");
+    assertThat(types1.getBsonTimestamp2()).isEqualTo(1409385948001l);
+    assertThat(types2.getBsonTimestamp2()).isEqualTo(1409385948001l);
+    assertThat(types1.getDate1().toString()).isEqualTo("2014-08-31 17:09:34.033");
+    assertThat(types2.getDate1().toString()).isEqualTo("2014-08-31 17:09:34.033");
+    assertThat(types1.getDate2()).isEqualTo(1409476174033l);
+    assertThat(types2.getDate2()).isEqualTo(1409476174033l);
+    assertThat(types1.getMongoString().toString()).isEqualTo(mongoString);
+    assertThat(types2.getMongoString().toString()).isEqualTo(mongoString);
+
+    DBObject object1 = RecordConverter.toDbObject(types1);
+    DBObject object2 = RecordConverter.toDbObject(types2);
+
+    assertThat(object1.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
+    assertThat(object2.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
+    assertThat(object1.get("bsonTimestamp1")).isEqualTo(new BSONTimestamp(1409385948, 1));
+    assertThat(object2.get("bsonTimestamp1")).isEqualTo(new BSONTimestamp(1409385948, 1));
+    assertThat(object1.get("bsonTimestamp2")).isEqualTo(new BSONTimestamp(1409385948, 1));
+    assertThat(object2.get("bsonTimestamp2")).isEqualTo(new BSONTimestamp(1409385948, 1));
+    assertThat(object1.get("date1")).isEqualTo(
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    assertThat(object2.get("date1")).isEqualTo(
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    assertThat(object1.get("date2")).isEqualTo(
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    assertThat(object2.get("date2")).isEqualTo(
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    assertThat(object1.get("mongoString")).isEqualTo(mongoObject);
+    assertThat(object2.get("mongoString")).isEqualTo(mongoObject);
+  }
+
+  @Test
+  public void testTypes2() throws Exception {
+    Schema schema = getSchema("types2.avsc");
+    DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
+    String mongoString = JSON.serialize(mongoObject);
+
+    String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31 17:09:34.033\", \"date2\": 1409476174033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
+    Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
+    SpecificDatumReader<Types2> reader = new SpecificDatumReader<Types2>(schema);
+    Types2 types1 = reader.read(null, decoder);
+
+    DBObject object = new BasicDBObject();
+    object.put("_id", new ObjectId("5401bf578de2a77380c5489a"));
+    object.put("bsonTimestamp1", new BSONTimestamp(1409385948, 1));
+    object.put("bsonTimestamp2", new BSONTimestamp(1409385948, 1));
+    object.put("date1", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    object.put("date2", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    object.put("mongoString", mongoObject);
+    Types2 types2 = RecordConverter.toRecord(Types2.class, object);
 
     assertThat(types1.getObjectId().toString()).isEqualTo("5401bf578de2a77380c5489a");
     assertThat(types2.getObjectId().toString()).isEqualTo("5401bf578de2a77380c5489a");

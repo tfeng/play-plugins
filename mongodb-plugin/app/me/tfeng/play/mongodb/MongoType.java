@@ -18,34 +18,30 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.plugins;
+package me.tfeng.play.mongodb;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Date;
 
-import me.tfeng.play.mongodb.OplogListener;
-import me.tfeng.play.spring.Startable;
-import play.Application;
-import play.Play;
+import org.bson.types.BSONTimestamp;
+import org.bson.types.ObjectId;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class MongoDbPlugin extends StartablePlugin<MongoDbPlugin> {
+public enum MongoType {
 
-  public static MongoDbPlugin getInstance() {
-    return Play.application().plugin(MongoDbPlugin.class);
+  DATE(Date.class),
+  GENERIC(Object.class),
+  OBJECT_ID(ObjectId.class),
+  TIMESTAMP(BSONTimestamp.class);
+
+  private final Class<?> mongoClass;
+
+  private MongoType(Class<?> mongoClass) {
+    this.mongoClass = mongoClass;
   }
 
-  public MongoDbPlugin(Application application) {
-    super(application);
-  }
-
-  @Override
-  protected List<Startable> getStartables() {
-    return getApplicationContext().getBeansOfType(OplogListener.class).entrySet().stream()
-        .sorted((entry1, entry2) -> entry1.getKey().compareTo(entry2.getKey()))
-        .map(entry -> entry.getValue())
-        .collect(Collectors.toList());
+  public Class<?> getMongoClass() {
+    return mongoClass;
   }
 }

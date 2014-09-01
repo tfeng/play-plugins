@@ -32,7 +32,7 @@
       "name": "document",
       "type": {
         "type": "string",
-        "mongo-class": "java.lang.Object"
+        "mongo-type": "GENERIC"
       },
       "mongo-name": "o"
     }
