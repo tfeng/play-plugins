@@ -20,6 +20,8 @@
 
 package me.tfeng.play.mongodb;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import me.tfeng.play.spring.Startable;
 
 import org.bson.types.BSONTimestamp;
@@ -33,7 +35,6 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
-import com.mongodb.MongoCursorNotFoundException;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -48,9 +49,15 @@ public class OplogListener implements Startable {
       do {
         try {
           object = cursor.next();
-        } catch (MongoCursorNotFoundException e) {
-          LOG.info("Handler thread stopped");
-          break;
+        } catch (Exception e) {
+          if (stopping.get()) {
+            break;
+          } else if (e instanceof RuntimeException) {
+            throw (RuntimeException) e;
+          } else {
+            throw new RuntimeException(
+                "Unexpected exception occurred while trying to read the next oplog item", e);
+          }
         }
 
         if (LOG.isDebugEnabled()) {
@@ -68,6 +75,8 @@ public class OplogListener implements Startable {
   public static final String DB_NAME = "local";
 
   private static final ALogger LOG = Logger.of(OplogListener.class);
+
+  private static final AtomicBoolean stopping = new AtomicBoolean(false);
 
   private DBCollection collection;
 
@@ -93,6 +102,8 @@ public class OplogListener implements Startable {
     collection = mongoClient.getDB(DB_NAME).getCollection(COLLECTION_NAME);
     cursor = collection.find(getQuery()).sort(getSort()).setOptions(getOptions());
 
+    stopping.set(false);
+
     thread = new Thread(new OplogListenerThread());
     thread.start();
     LOG.info("Handler thread started");
@@ -100,6 +111,7 @@ public class OplogListener implements Startable {
 
   @Override
   public void onStop() throws Throwable {
+    stopping.set(true);
     cursor.close();
     LOG.info("Waiting for handler thread to stop");
     thread.join();

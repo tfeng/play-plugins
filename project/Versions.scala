@@ -1,9 +1,11 @@
 package me.tfeng.play.plugins
 
 object Versions {
-  val project = "0.1.5"
+  val project = "0.1.6-SNAPSHOT"
 
-  val sbtPlugins = "0.1.5"
+  val sbtPlugins = "0.1.6-SNAPSHOT"
+
+  val scala = "2.10.4"
 
   val avro = "1.7.7"
 
