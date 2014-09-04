@@ -30,8 +30,8 @@ import org.bson.types.ObjectId;
  */
 public enum MongoType {
 
+  ANY(Object.class),
   DATE(Date.class),
-  GENERIC(Object.class),
   OBJECT_ID(ObjectId.class),
   TIMESTAMP(BSONTimestamp.class);
 
