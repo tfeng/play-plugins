@@ -40,7 +40,7 @@ import com.google.common.collect.Lists;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class SpringPlugin extends AbstractPlugin<SpringPlugin> {
+public class SpringPlugin extends AbstractPlugin {
 
   private static final ALogger LOG = Logger.of(SpringPlugin.class);
 

@@ -37,7 +37,7 @@ import play.Play;
  * @author Thomas Feng (huining.feng@gmail.com)
  */
 @WithSpringConfig("classpath:oauth2-plugin.xml")
-public class OAuth2Plugin extends AbstractPlugin<OAuth2Plugin> {
+public class OAuth2Plugin extends AbstractPlugin {
 
   public static OAuth2Plugin getInstance() {
     return Play.application().plugin(OAuth2Plugin.class);

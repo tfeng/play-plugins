@@ -62,7 +62,7 @@ import com.google.common.io.CharStreams;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class DustPlugin extends AbstractPlugin<DustPlugin> {
+public class DustPlugin extends AbstractPlugin {
 
   private static final String DUST_JS_NAME = "dust-full.min.js";
 

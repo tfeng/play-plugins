@@ -42,7 +42,7 @@ import com.ning.http.client.Response;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class HttpPlugin extends AbstractPlugin<HttpPlugin> {
+public class HttpPlugin extends AbstractPlugin {
 
   private static final ALogger LOG = Logger.of(HttpPlugin.class);
 

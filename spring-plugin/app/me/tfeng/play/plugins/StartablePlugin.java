@@ -26,12 +26,11 @@ import me.tfeng.play.spring.Startable;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
-import play.Plugin;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public abstract class StartablePlugin<T extends Plugin> extends AbstractPlugin<T> {
+public abstract class StartablePlugin extends AbstractPlugin {
 
   private static final ALogger LOG = Logger.of(StartablePlugin.class);
 

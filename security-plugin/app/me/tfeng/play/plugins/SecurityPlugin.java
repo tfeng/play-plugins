@@ -31,7 +31,7 @@ import play.Play;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class SecurityPlugin extends AbstractPlugin<SecurityPlugin> {
+public class SecurityPlugin extends AbstractPlugin {
 
   public static SecurityPlugin getInstance() {
     return Play.application().plugin(SecurityPlugin.class);

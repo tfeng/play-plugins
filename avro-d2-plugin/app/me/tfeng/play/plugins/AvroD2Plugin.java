@@ -48,7 +48,7 @@ import play.Play;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroD2Plugin extends AbstractPlugin<AvroD2Plugin> implements Watcher {
+public class AvroD2Plugin extends AbstractPlugin implements Watcher {
 
   private static final ALogger LOG = Logger.of(AvroD2Plugin.class);
 

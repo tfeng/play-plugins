@@ -31,7 +31,7 @@ import play.Play;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class MongoDbPlugin extends StartablePlugin<MongoDbPlugin> {
+public class MongoDbPlugin extends StartablePlugin {
 
   public static MongoDbPlugin getInstance() {
     return Play.application().plugin(MongoDbPlugin.class);

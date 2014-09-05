@@ -30,7 +30,7 @@ import play.Plugin;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AbstractPlugin<T extends Plugin> extends Plugin {
+public class AbstractPlugin extends Plugin {
 
   private Application application;
 

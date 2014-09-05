@@ -38,7 +38,7 @@ import play.Play;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroPlugin extends AbstractPlugin<AvroPlugin> {
+public class AvroPlugin extends AbstractPlugin {
 
   public static AvroPlugin getInstance() {
     return Play.application().plugin(AvroPlugin.class);
