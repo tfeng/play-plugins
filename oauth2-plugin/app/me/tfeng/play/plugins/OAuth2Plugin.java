@@ -27,7 +27,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.oauth2.provider.ClientDetailsService;
 import org.springframework.security.oauth2.provider.TokenGranter;
-import org.springframework.security.oauth2.provider.authentication.OAuth2AuthenticationManager;
 import org.springframework.security.oauth2.provider.token.AuthorizationServerTokenServices;
 
 import play.Application;
@@ -44,16 +43,16 @@ public class OAuth2Plugin extends AbstractPlugin {
   }
 
   @Autowired
+  @Qualifier("oauth2-plugin.authentication-manager")
+  private AuthenticationManager authenticationManager;
+
+  @Autowired
   @Qualifier("oauth2-plugin.client-authentication-manager")
   private AuthenticationManager clientAuthenticationManager;
 
   @Autowired
   @Qualifier("oauth2-plugin.client-details-service")
   private ClientDetailsService clientDetailsService;
-
-  @Autowired
-  @Qualifier("oauth2-plugin.authentication-manager")
-  private OAuth2AuthenticationManager oauth2AuthenticationManager;
 
   @Autowired
   @Qualifier("oauth2-plugin.token-granter")
@@ -67,16 +66,16 @@ public class OAuth2Plugin extends AbstractPlugin {
     super(application);
   }
 
+  public AuthenticationManager getAuthenticationManager() {
+    return authenticationManager;
+  }
+
   public AuthenticationManager getClientAuthenticationManager() {
     return clientAuthenticationManager;
   }
 
   public ClientDetailsService getClientDetailsService() {
     return clientDetailsService;
-  }
-
-  public AuthenticationManager getOAuth2AuthenticationManager() {
-    return oauth2AuthenticationManager;
   }
 
   public TokenGranter getTokenGranter() {

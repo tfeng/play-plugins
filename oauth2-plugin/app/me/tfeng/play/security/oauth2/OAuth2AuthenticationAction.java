@@ -54,7 +54,7 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
     } else {
       Authentication authRequest = new PreAuthenticatedAuthenticationToken(token, "");
       Authentication authResult =
-          OAuth2Plugin.getInstance().getOAuth2AuthenticationManager().authenticate(authRequest);
+          OAuth2Plugin.getInstance().getAuthenticationManager().authenticate(authRequest);
       SecurityContextHolder.getContext().setAuthentication(authResult);
       LOG.info("Authenticated successfully");
     }
