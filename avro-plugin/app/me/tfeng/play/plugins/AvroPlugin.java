@@ -22,14 +22,13 @@ package me.tfeng.play.plugins;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
+import java.net.URL;
 import java.util.Map;
 
 import me.tfeng.play.avro.AvroHelper;
 
 import org.apache.avro.Protocol;
-import org.apache.avro.ipc.AsyncHttpTransceiver;
-import org.apache.avro.ipc.AsyncRequestor;
-import org.apache.avro.ipc.PromiseHolder;
+import org.apache.avro.ipc.IpcRequestor;
 import org.apache.avro.specific.SpecificData;
 
 import play.Application;
@@ -50,20 +49,16 @@ public class AvroPlugin extends AbstractPlugin {
     super(application);
   }
 
-  public <T> T asyncClient(Class<T> interfaceClass, AsyncHttpTransceiver transciever)
-      throws IOException {
-    return asyncClient(interfaceClass, transciever,
-        new SpecificData(interfaceClass.getClassLoader()));
+  public <T> T client(Class<T> interfaceClass, URL url) {
+    return client(interfaceClass, url, new SpecificData(interfaceClass.getClassLoader()));
   }
 
   @SuppressWarnings("unchecked")
-  public <T> T asyncClient(Class<T> interfaceClass, AsyncHttpTransceiver transciever,
-      SpecificData data) {
+  public <T> T client(Class<T> interfaceClass, URL url, SpecificData data) {
     try {
       Protocol protocol = AvroHelper.getProtocol(interfaceClass);
-      return (T) Proxy.newProxyInstance(data.getClassLoader(),
-          new Class[] { interfaceClass, PromiseHolder.class },
-          new AsyncRequestor(protocol, transciever, data));
+      return (T) Proxy.newProxyInstance(data.getClassLoader(), new Class[] { interfaceClass },
+          new IpcRequestor(protocol, url, data));
     } catch (IOException e) {
       throw new RuntimeException("Unable to create async client", e);
     }

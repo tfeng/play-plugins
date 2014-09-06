@@ -16,6 +16,9 @@ lazy val security =
 lazy val http =
     project in file("http-plugin") enablePlugins(PlayJava) dependsOn(spring)
 
+lazy val dust =
+    project in file("dust-plugin") enablePlugins(PlayScala) dependsOn(spring)
+
 lazy val oauth2 =
     project in file("oauth2-plugin") enablePlugins(PlayJava) dependsOn(security)
 
@@ -24,9 +27,6 @@ lazy val avro =
 
 lazy val avroD2 =
     project in file("avro-d2-plugin") enablePlugins(PlayScala) dependsOn(avro)
-
-lazy val dust =
-    project in file("dust-plugin") enablePlugins(PlayScala) dependsOn(spring)
 
 lazy val mongodb =
     project in file("mongodb-plugin") enablePlugins(PlayJava) dependsOn(avro)
