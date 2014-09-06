@@ -55,8 +55,8 @@ public class OAuth2Plugin extends AbstractPlugin {
   @Qualifier("oauth2-plugin.authentication-manager")
   private OAuth2AuthenticationManager oauth2AuthenticationManager;
 
-  // @Autowired
-  // @Qualifier("oauth2-plugin.token-granter")
+  @Autowired
+  @Qualifier("oauth2-plugin.token-granter")
   private TokenGranter tokenGranter;
 
   @Autowired
@@ -85,12 +85,5 @@ public class OAuth2Plugin extends AbstractPlugin {
 
   public AuthorizationServerTokenServices getTokenServices() {
     return tokenServices;
-  }
-
-  @Override
-  public void onStart() {
-    super.onStart();
-
-    tokenGranter = getApplicationContext().getBean(TokenGranter.class);
   }
 }
