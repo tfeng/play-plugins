@@ -27,7 +27,7 @@ import java.util.List;
 
 import me.tfeng.play.plugins.AvroPlugin;
 
-import org.apache.avro.ipc.InternalHttpTransceiver;
+import org.apache.avro.ipc.AsyncHttpTransceiver;
 import org.apache.avro.ipc.Responder;
 import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.http.entity.ContentType;
@@ -58,12 +58,12 @@ public class BinaryIpcController extends Controller {
     Class<?> protocolClass = Play.application().classloader().loadClass(protocol);
     Object implementation = plugin.getProtocolImplementations().get(protocolClass);
     byte[] bytes = request().body().asRaw().asBytes();
-    List<ByteBuffer> buffers = InternalHttpTransceiver.readBuffers(new ByteArrayInputStream(bytes));
+    List<ByteBuffer> buffers = AsyncHttpTransceiver.readBuffers(new ByteArrayInputStream(bytes));
     Responder responder = new SpecificResponder(protocolClass, implementation);
     List<ByteBuffer> response = responder.respond(buffers);
     ByteArrayOutputStream outStream = new ByteArrayOutputStream();
     try {
-      InternalHttpTransceiver.writeBuffers(response, outStream);
+      AsyncHttpTransceiver.writeBuffers(response, outStream);
     } finally {
       outStream.close();
     }

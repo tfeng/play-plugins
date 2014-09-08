@@ -35,6 +35,7 @@ import me.tfeng.play.avro.d2.AvroD2Helper;
 import me.tfeng.play.avro.d2.AvroD2Server;
 
 import org.apache.avro.Protocol;
+import org.apache.avro.specific.SpecificData;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
@@ -80,11 +81,15 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     super(application);
   }
 
-  public <T> T getClient(Class<T> interfaceClass) {
+  public <T> T client(Class<T> interfaceClass) {
+    return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()));
+  }
+
+  public <T> T client(Class<T> interfaceClass, SpecificData data) {
     URI uri = AvroD2Helper.getUri(AvroHelper.getProtocol(interfaceClass));
     AvroD2Client client = clients.get(uri);
     if (client == null) {
-      client = new AvroD2Client(zk, interfaceClass);
+      client = new AvroD2Client(zk, interfaceClass, data);
       clients.put(uri, client);
     }
     return interfaceClass.cast(Proxy.newProxyInstance(interfaceClass.getClassLoader(),

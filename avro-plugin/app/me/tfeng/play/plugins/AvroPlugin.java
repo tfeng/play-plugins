@@ -29,6 +29,7 @@ import java.util.Map;
 import me.tfeng.play.avro.AvroHelper;
 
 import org.apache.avro.Protocol;
+import org.apache.avro.ipc.AsyncHttpTransceiver;
 import org.apache.avro.ipc.IpcRequestor;
 import org.apache.avro.specific.SpecificData;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -60,7 +61,7 @@ public class AvroPlugin extends AbstractPlugin {
     try {
       Protocol protocol = AvroHelper.getProtocol(interfaceClass);
       return (T) Proxy.newProxyInstance(data.getClassLoader(), new Class[] { interfaceClass },
-          new IpcRequestor(protocol, url, data));
+          new IpcRequestor(protocol, new AsyncHttpTransceiver(url), data));
     } catch (IOException e) {
       throw new RuntimeException("Unable to create async client", e);
     }

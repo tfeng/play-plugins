@@ -31,7 +31,8 @@ import java.util.List;
 import me.tfeng.play.avro.AvroHelper;
 
 import org.apache.avro.Protocol;
-import org.apache.avro.ipc.specific.SpecificRequestor;
+import org.apache.avro.ipc.IpcRequestor;
+import org.apache.avro.specific.SpecificData;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
@@ -48,18 +49,22 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   private int lastIndex = -1;
   private final Protocol protocol;
-  private final SpecificRequestor requestor;
+  private final IpcRequestor requestor;
   private final List<URL> serverUrls = new ArrayList<>();
   private final ZooKeeper zk;
 
   public AvroD2Client(ZooKeeper zk, Class<?> interfaceClass) {
+    this(zk, interfaceClass, new SpecificData(interfaceClass.getClassLoader()));
+  }
+
+  public AvroD2Client(ZooKeeper zk, Class<?> interfaceClass, SpecificData data) {
     this.zk = zk;
 
     protocol = AvroHelper.getProtocol(interfaceClass);
     refresh();
 
     try {
-      requestor = new SpecificRequestor(interfaceClass, new AvroD2Transceiver(this));
+      requestor = new IpcRequestor(interfaceClass, new AvroD2Transceiver(this), data);
     } catch (IOException e) {
       throw new RuntimeException("Unable to initialize Avro requestor for "
           + AvroD2Helper.getUri(protocol), e);

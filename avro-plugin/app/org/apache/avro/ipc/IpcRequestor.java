@@ -22,7 +22,6 @@ package org.apache.avro.ipc;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.net.URL;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.ipc.specific.SpecificRequestor;
@@ -43,35 +42,29 @@ public class IpcRequestor extends SpecificRequestor {
   }
   private SpecificRequestor syncRequestor;
 
-  private final URL url;
-
-  public IpcRequestor(Class<?> iface, URL url) throws IOException {
-    super(iface, new AsyncHttpTransceiver(url));
-    this.url = url;
+  public IpcRequestor(Class<?> iface, AsyncTransceiver transceiver) throws IOException {
+    super(iface, (Transceiver) transceiver);
   }
 
-  public IpcRequestor(Class<?> iface, URL url, SpecificData data)
+  public IpcRequestor(Class<?> iface, AsyncTransceiver transceiver, SpecificData data)
       throws IOException {
-    super(iface, new AsyncHttpTransceiver(url), data);
-    this.url = url;
+    super(iface, (Transceiver) transceiver, data);
   }
 
-  public IpcRequestor(Protocol protocol, URL url) throws IOException {
-    super(protocol, new AsyncHttpTransceiver(url));
-    this.url = url;
+  public IpcRequestor(Protocol protocol, AsyncTransceiver transceiver) throws IOException {
+    super(protocol, (Transceiver) transceiver);
   }
 
-  public IpcRequestor(Protocol protocol, URL url, SpecificData data)
+  public IpcRequestor(Protocol protocol, AsyncTransceiver transceiver, SpecificData data)
       throws IOException {
-    super(protocol, new AsyncHttpTransceiver(url), data);
-    this.url = url;
+    super(protocol, (Transceiver) transceiver, data);
   }
 
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    AsyncTransceiver transceiver = (AsyncTransceiver) getTransceiver();
     if (Promise.class.isAssignableFrom(method.getReturnType())) {
       AsyncRequest asyncRequest = new AsyncRequest(method.getName(), args, new RPCContext());
-      AsyncHttpTransceiver transceiver = (AsyncHttpTransceiver) getTransceiver();
       CallFuture<Object> callFuture =
           asyncRequest.getMessage().isOneWay() ? null : new CallFuture<Object>();
       TransceiverCallback<Object> transceiverCallback =
@@ -89,7 +82,7 @@ public class IpcRequestor extends SpecificRequestor {
           });
     } else {
       if (syncRequestor == null) {
-        syncRequestor = new SpecificRequestor(getLocal(), new HttpTransceiver(url),
+        syncRequestor = new SpecificRequestor(getLocal(), transceiver.getSyncTransceiver(),
             getSpecificData());
       }
       return syncRequestor.invoke(proxy, method, args);

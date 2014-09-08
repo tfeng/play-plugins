@@ -23,6 +23,7 @@ package org.apache.avro.ipc;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -34,7 +35,15 @@ import play.libs.ws.WSResponse;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AsyncHttpTransceiver extends HttpTransceiver {
+public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransceiver {
+
+  public static List<ByteBuffer> readBuffers(InputStream in) throws IOException {
+    return HttpTransceiver.readBuffers(in);
+  }
+
+  public static void writeBuffers(List<ByteBuffer> buffers, OutputStream out) throws IOException {
+    HttpTransceiver.writeBuffers(buffers, out);
+  }
 
   private Promise<WSResponse> promise;
   private int timeout;
@@ -52,12 +61,18 @@ public class AsyncHttpTransceiver extends HttpTransceiver {
     });
   }
 
+  @Override
   public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request) throws IOException {
     lockChannel();
     writeBuffers(request);
     return asyncReadBuffers().transform(
         response -> { unlockChannel(); return response; },
         throwable -> { unlockChannel(); return throwable; });
+  }
+
+  @Override
+  public Transceiver getSyncTransceiver() {
+    return new HttpTransceiver(url);
   }
 
   @Override

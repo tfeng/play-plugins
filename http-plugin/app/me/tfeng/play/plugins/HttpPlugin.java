@@ -33,9 +33,12 @@ import play.Play;
 import play.libs.F.Promise;
 import play.libs.ws.WSResponse;
 import play.libs.ws.ning.NingWSResponse;
+import play.mvc.Controller;
+import play.mvc.Http.Request;
 
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
 import com.ning.http.client.AsyncHttpClientConfigBean;
 import com.ning.http.client.Response;
 
@@ -43,6 +46,8 @@ import com.ning.http.client.Response;
  * @author Thomas Feng (huining.feng@gmail.com)
  */
 public class HttpPlugin extends AbstractPlugin {
+
+  public static final String[] PRESERVED_HEADERS = { "Authorization" };
 
   private static final ALogger LOG = Logger.of(HttpPlugin.class);
 
@@ -97,11 +102,22 @@ public class HttpPlugin extends AbstractPlugin {
       throws IOException {
     final scala.concurrent.Promise<WSResponse> scalaPromise =
         scala.concurrent.Promise$.MODULE$.apply();
-    asyncHttpClient.preparePost(url.toString())
+    BoundRequestBuilder builder = asyncHttpClient.preparePost(url.toString())
         .setHeader("Content-Type", contentType)
         .setContentLength(body.length)
-        .setBody(body)
-        .execute(new AsyncCompletionHandler<Response>() {
+        .setBody(body);
+    Request request = null;
+    try {
+      request = Controller.request();
+    } catch (RuntimeException e) {
+      LOG.info("Unable to get current request; do not pass headers to downstream calls");
+    }
+    if (request != null) {
+      for (String preservedHeader : PRESERVED_HEADERS) {
+        builder.setHeader(preservedHeader, request.getHeader(preservedHeader));
+      }
+    }
+    builder.execute(new AsyncCompletionHandler<Response>() {
           @Override
           public Response onCompleted(Response response) {
             scalaPromise.success(new NingWSResponse(response));

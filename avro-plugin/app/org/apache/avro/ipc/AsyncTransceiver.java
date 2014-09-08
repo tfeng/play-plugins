@@ -18,24 +18,20 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.avro.d2;
+package org.apache.avro.ipc;
 
-import org.apache.avro.ipc.AsyncHttpTransceiver;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
+
+import play.libs.F.Promise;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroD2Transceiver extends AsyncHttpTransceiver {
+public interface AsyncTransceiver {
 
-  private final AvroD2Client client;
+  public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request) throws IOException;
 
-  public AvroD2Transceiver(AvroD2Client client) {
-    super(client.getNextServerUrl());
-    this.client = client;
-  }
-
-  @Override
-  public String getRemoteName() {
-    return AvroD2Helper.getUri(client.getProtocol()).toString();
-  }
+  public Transceiver getSyncTransceiver();
 }
