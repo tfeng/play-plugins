@@ -20,12 +20,18 @@
 
 package me.tfeng.play.security.oauth2;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import me.tfeng.play.plugins.OAuth2Plugin;
 
-import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.common.OAuth2AccessToken;
-import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
+import org.springframework.security.oauth2.provider.OAuth2Request;
 
 import play.Logger;
 import play.Logger.ALogger;
@@ -40,6 +46,12 @@ import play.mvc.Result;
  */
 public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
 
+  public static String ACCESS_TOKEN = "access_token";
+
+  public static String AUTHORIZATION = "Authorization";
+
+  public static String BEARER = "Bearer";
+
   private static final ALogger LOG = Logger.of(OAuth2AuthenticationAction.class);
 
   @Override
@@ -47,34 +59,68 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
     Request request = context.request();
     String token = getAuthorizationToken(request);
     if (token == null) {
-      token = request.getQueryString(OAuth2AccessToken.ACCESS_TOKEN);
-    }
-    if (token == null) {
       LOG.info("Authentication skipped");
-    } else {
-      Authentication authRequest = new PreAuthenticatedAuthenticationToken(token, "");
-      Authentication authResult =
-          OAuth2Plugin.getInstance().getAuthenticationManager().authenticate(authRequest);
-      SecurityContextHolder.getContext().setAuthentication(authResult);
-      LOG.info("Authenticated successfully");
-    }
-    try {
-      return delegate.call(context);
-    } finally {
       SecurityContextHolder.clearContext();
+      return delegate.call(context);
+    } else {
+      Promise<me.tfeng.play.security.oauth2.Authentication> promise =
+          OAuth2Plugin.getInstance().getAuthenticationManager().authenticate(token);
+      return promise.flatMap(authentication -> {
+        LOG.info("Authenticated successfully");
+        org.springframework.security.oauth2.provider.OAuth2Authentication oauth2Authentication =
+            new org.springframework.security.oauth2.provider.OAuth2Authentication(
+                getOAuth2Request(authentication.getClient()),
+                getAuthentication(authentication.getUser()));
+        SecurityContextHolder.getContext().setAuthentication(oauth2Authentication);
+        try {
+          return delegate.call(context);
+        } finally {
+          SecurityContextHolder.clearContext();
+        }
+      });
+    }
+  }
+
+  protected UsernamePasswordAuthenticationToken getAuthentication(UserAuthentication user) {
+    if (user == null) {
+      return null;
+    } else {
+      List<GrantedAuthority> authorities = user.getAuthorities().stream()
+          .map(authority -> new SimpleGrantedAuthority(authority.toString()))
+          .collect(Collectors.toList());
+      return new UsernamePasswordAuthenticationToken(user.getId().toString(), null, authorities);
     }
   }
 
   protected String getAuthorizationToken(Request request) {
-    String[] headers = request.headers().get("Authorization");
+    String[] headers = request.headers().get(AUTHORIZATION);
     if (headers != null) {
       for (String header : headers) {
-        if (header.toLowerCase().startsWith(OAuth2AccessToken.BEARER_TYPE.toLowerCase())) {
-          String authHeaderValue = header.substring(OAuth2AccessToken.BEARER_TYPE.length()).trim();
+        if (header.toLowerCase().startsWith(BEARER.toLowerCase())) {
+          String authHeaderValue = header.substring(BEARER.length()).trim();
           return authHeaderValue.split(",")[0];
         }
       }
     }
-    return null;
+    return request.getQueryString(ACCESS_TOKEN);
+  }
+
+  protected OAuth2Request getOAuth2Request(ClientAuthentication client) {
+    List<GrantedAuthority> authorities = client.getAuthorities().stream()
+        .map(authority -> new SimpleGrantedAuthority(authority.toString()))
+        .collect(Collectors.toList());
+    Set<String> scopes = client.getScopes().stream()
+        .map(scope -> scope.toString())
+        .collect(Collectors.toSet());
+    return new OAuth2Request(
+        Collections.emptyMap(),
+        client.getId().toString(),
+        authorities,
+        true,
+        scopes,
+        Collections.emptySet(),
+        null,
+        Collections.emptySet(),
+        Collections.emptyMap());
   }
 }

@@ -20,14 +20,10 @@
 
 package me.tfeng.play.plugins;
 
-import me.tfeng.play.spring.WithSpringConfig;
+import me.tfeng.play.security.oauth2.AuthenticationManagerClient;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.oauth2.provider.ClientDetailsService;
-import org.springframework.security.oauth2.provider.TokenGranter;
-import org.springframework.security.oauth2.provider.token.AuthorizationServerTokenServices;
 
 import play.Application;
 import play.Play;
@@ -35,7 +31,6 @@ import play.Play;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-@WithSpringConfig("classpath:oauth2-plugin.xml")
 public class OAuth2Plugin extends AbstractPlugin {
 
   public static OAuth2Plugin getInstance() {
@@ -44,45 +39,13 @@ public class OAuth2Plugin extends AbstractPlugin {
 
   @Autowired
   @Qualifier("oauth2-plugin.authentication-manager")
-  private AuthenticationManager authenticationManager;
-
-  @Autowired
-  @Qualifier("oauth2-plugin.client-authentication-manager")
-  private AuthenticationManager clientAuthenticationManager;
-
-  @Autowired
-  @Qualifier("oauth2-plugin.client-details-service")
-  private ClientDetailsService clientDetailsService;
-
-  @Autowired
-  @Qualifier("oauth2-plugin.token-granter")
-  private TokenGranter tokenGranter;
-
-  @Autowired
-  @Qualifier("oauth2-plugin.token-services")
-  private AuthorizationServerTokenServices tokenServices;
+  private AuthenticationManagerClient authenticationManager;
 
   public OAuth2Plugin(Application application) {
     super(application);
   }
 
-  public AuthenticationManager getAuthenticationManager() {
+  public AuthenticationManagerClient getAuthenticationManager() {
     return authenticationManager;
-  }
-
-  public AuthenticationManager getClientAuthenticationManager() {
-    return clientAuthenticationManager;
-  }
-
-  public ClientDetailsService getClientDetailsService() {
-    return clientDetailsService;
-  }
-
-  public TokenGranter getTokenGranter() {
-    return tokenGranter;
-  }
-
-  public AuthorizationServerTokenServices getTokenServices() {
-    return tokenServices;
   }
 }

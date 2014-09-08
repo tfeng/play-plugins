@@ -23,6 +23,7 @@ package me.tfeng.play.plugins;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.URL;
+import java.util.Collections;
 import java.util.Map;
 
 import me.tfeng.play.avro.AvroHelper;
@@ -30,6 +31,7 @@ import me.tfeng.play.avro.AvroHelper;
 import org.apache.avro.Protocol;
 import org.apache.avro.ipc.IpcRequestor;
 import org.apache.avro.specific.SpecificData;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 
 import play.Application;
 import play.Play;
@@ -73,7 +75,11 @@ public class AvroPlugin extends AbstractPlugin {
   public void onStart() {
     super.onStart();
 
-    protocolImplementations =
-        getApplicationContext().getBean("avro-plugin.protocol-implementations", Map.class);
+    try {
+      protocolImplementations =
+          getApplicationContext().getBean("avro-plugin.protocol-implementations", Map.class);
+    } catch (NoSuchBeanDefinitionException e) {
+      protocolImplementations = Collections.emptyMap();
+    }
   }
 }
