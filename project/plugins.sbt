@@ -3,6 +3,6 @@ resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/release
 // The Play plugin
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.4")
 
-addSbtPlugin("me.tfeng.sbt-plugins" % "avro-plugin" % "0.1.7-SNAPSHOT")
+addSbtPlugin("me.tfeng.sbt-plugins" % "avro-plugin" % "0.1.7")
 
-addSbtPlugin("me.tfeng.sbt-plugins" % "dust-plugin" % "0.1.7-SNAPSHOT")
+addSbtPlugin("me.tfeng.sbt-plugins" % "dust-plugin" % "0.1.7")
