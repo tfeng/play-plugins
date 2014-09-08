@@ -59,7 +59,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testArrays() throws Exception {
-    Schema schema = getSchema("arrays.avsc");
+    Schema schema = getSchema("schemata/arrays.avsc");
 
     GenericRecordBuilder builder = new GenericRecordBuilder(schema);
     builder.set("arrays", ImmutableList.of(ImmutableList.of(ImmutableList.of(1, 2, 3),
@@ -77,7 +77,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testEmpty() throws Exception {
-    Schema schema = getSchema("empty.avsc");
+    Schema schema = getSchema("schemata/empty.avsc");
 
     GenericRecordBuilder builder = new GenericRecordBuilder(schema);
     Record record1 = builder.build();
@@ -92,7 +92,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testEnums() throws Exception {
-    Schema schema = getSchema("enums.avsc");
+    Schema schema = getSchema("schemata/enums.avsc");
 
     String avroJson = "{\"enum1\": \"X\", \"enum2\": {\"test.Enum2\": \"A\"}, \"enum3\": {\"null\": null}, \"enum4\": [{\"test.Enum4\": \"SAT\"}, {\"test.Enum4\": \"SUN\"}]}}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
@@ -110,7 +110,7 @@ public class TestDBObjectDecoder {
   @Test
   @SuppressWarnings("unchecked")
   public void testIds() throws Exception {
-    Schema schema = getSchema("ids.avsc");
+    Schema schema = getSchema("schemata/ids.avsc");
 
     String avroJson = "{\"id\": \"5401bf578de2a77380c5489a\", \"nested\": {\"id\": \"6401bf578de2a77380c5489a\"}}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
@@ -140,7 +140,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testMaps() throws Exception {
-    Schema schema = getSchema("maps.avsc");
+    Schema schema = getSchema("schemata/maps.avsc");
 
     GenericRecordBuilder builder = new GenericRecordBuilder(schema);
     builder.set("maps", ImmutableMap.of("key1", ImmutableMap.of("value1", 1, "value2", 2), "key2",
@@ -159,7 +159,7 @@ public class TestDBObjectDecoder {
   @Test
   @SuppressWarnings("unchecked")
   public void testNames() throws Exception {
-    Schema schema = getSchema("names.avsc");
+    Schema schema = getSchema("schemata/names.avsc");
 
     String avroJson = "{\"id\": \"5401bf578de2a77380c5489a\", \"nested\": {\"id\": \"5401bf578de2a77380c5489b\"}}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
@@ -188,7 +188,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testPrimitives() throws Exception {
-    Schema schema = getSchema("primitives.avsc");
+    Schema schema = getSchema("schemata/primitives.avsc");
 
     GenericRecordBuilder builder = new GenericRecordBuilder(schema);
     builder.set("i", 1);
@@ -218,7 +218,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testRecords() throws Exception {
-    Schema schema = getSchema("records.avsc");
+    Schema schema = getSchema("schemata/records.avsc");
 
     GenericRecordBuilder builder = new GenericRecordBuilder(schema);
     builder.set("record1",
@@ -251,7 +251,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testTypes1() throws Exception {
-    Schema schema = getSchema("types1.avsc");
+    Schema schema = getSchema("schemata/types1.avsc");
     DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
     String mongoString = JSON.serialize(mongoObject);
 
@@ -305,7 +305,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testTypes2() throws Exception {
-    Schema schema = getSchema("types2.avsc");
+    Schema schema = getSchema("schemata/types2.avsc");
     DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
     String mongoString = JSON.serialize(mongoObject);
 
@@ -359,7 +359,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testUnions() throws Exception {
-    Schema schema = getSchema("unions.avsc");
+    Schema schema = getSchema("schemata/unions.avsc");
 
     String avroJson = "{\"union1\": {\"int\": 1}, \"union2\": {\"test.Union2\": {\"union21\": {\"long\": 2}}}, \"union3\": {\"array\": [{\"boolean\": true}, {\"boolean\": false}, {\"null\": null}]}, \"union4\": {\"map\": {\"a\": {\"string\": \"A\"}, \"b\": {\"string\": \"B\"}, \"c\": {\"string\": \"C\"}}}, \"union5\": {\"null\": null}, \"union6\": {\"null\": null}}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
