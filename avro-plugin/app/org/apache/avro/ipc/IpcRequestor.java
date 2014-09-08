@@ -22,6 +22,8 @@ package org.apache.avro.ipc;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.util.List;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.ipc.specific.SpecificRequestor;
@@ -40,7 +42,6 @@ public class IpcRequestor extends SpecificRequestor {
       super(messageName, request, context);
     }
   }
-  private SpecificRequestor syncRequestor;
 
   public IpcRequestor(Class<?> iface, AsyncTransceiver transceiver) throws IOException {
     super(iface, (Transceiver) transceiver);
@@ -63,12 +64,12 @@ public class IpcRequestor extends SpecificRequestor {
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     AsyncTransceiver transceiver = (AsyncTransceiver) getTransceiver();
+    AsyncRequest asyncRequest = new AsyncRequest(method.getName(), args, new RPCContext());
+    CallFuture<Object> callFuture =
+        asyncRequest.getMessage().isOneWay() ? null : new CallFuture<Object>();
+    TransceiverCallback<Object> transceiverCallback =
+        new TransceiverCallback<Object>(asyncRequest, callFuture);
     if (Promise.class.isAssignableFrom(method.getReturnType())) {
-      AsyncRequest asyncRequest = new AsyncRequest(method.getName(), args, new RPCContext());
-      CallFuture<Object> callFuture =
-          asyncRequest.getMessage().isOneWay() ? null : new CallFuture<Object>();
-      TransceiverCallback<Object> transceiverCallback =
-          new TransceiverCallback<Object>(asyncRequest, callFuture);
       return transceiver.asyncTransceive(asyncRequest.getBytes()).map(
           response -> {
             transceiverCallback.handleResult(response);
@@ -81,11 +82,15 @@ public class IpcRequestor extends SpecificRequestor {
             }
           });
     } else {
-      if (syncRequestor == null) {
-        syncRequestor = new SpecificRequestor(getLocal(), transceiver.getSyncTransceiver(),
-            getSpecificData());
+      List<ByteBuffer> response = transceiver.transceive(asyncRequest.getBytes());
+      transceiverCallback.handleResult(response);
+      if (callFuture == null) {
+        return null;
+      } else if (callFuture.getError() == null) {
+        return callFuture.getResult();
+      } else {
+        throw callFuture.getError();
       }
-      return syncRequestor.invoke(proxy, method, args);
     }
   }
 }

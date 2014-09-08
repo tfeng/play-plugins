@@ -22,6 +22,7 @@ package me.tfeng.play.plugins;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.function.Consumer;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,8 +34,6 @@ import play.Play;
 import play.libs.F.Promise;
 import play.libs.ws.WSResponse;
 import play.libs.ws.ning.NingWSResponse;
-import play.mvc.Controller;
-import play.mvc.Http.Request;
 
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
@@ -77,6 +76,10 @@ public class HttpPlugin extends AbstractPlugin {
     super(application);
   }
 
+  public int getRequestTimeout() {
+    return requestTimeoutInMs;
+  }
+
   @Override
   public void onStart() {
     super.onStart();
@@ -100,34 +103,31 @@ public class HttpPlugin extends AbstractPlugin {
 
   public Promise<WSResponse> postRequest(URL url, String contentType, byte[] body)
       throws IOException {
+    return postRequest(url, contentType, body, null);
+  }
+
+  public Promise<WSResponse> postRequest(URL url, String contentType, byte[] body,
+      Consumer<BoundRequestBuilder> preparer) throws IOException {
     final scala.concurrent.Promise<WSResponse> scalaPromise =
         scala.concurrent.Promise$.MODULE$.apply();
     BoundRequestBuilder builder = asyncHttpClient.preparePost(url.toString())
         .setHeader("Content-Type", contentType)
         .setContentLength(body.length)
         .setBody(body);
-    Request request = null;
-    try {
-      request = Controller.request();
-    } catch (RuntimeException e) {
-      LOG.info("Unable to get current request; do not pass headers to downstream calls");
-    }
-    if (request != null) {
-      for (String preservedHeader : PRESERVED_HEADERS) {
-        builder.setHeader(preservedHeader, request.getHeader(preservedHeader));
-      }
+    if (preparer != null) {
+      preparer.accept(builder);
     }
     builder.execute(new AsyncCompletionHandler<Response>() {
-          @Override
-          public Response onCompleted(Response response) {
-            scalaPromise.success(new NingWSResponse(response));
-            return response;
-          }
-          @Override
-          public void onThrowable(Throwable t) {
-            scalaPromise.failure(t);
-          }
-        });
+      @Override
+      public Response onCompleted(Response response) {
+        scalaPromise.success(new NingWSResponse(response));
+        return response;
+      }
+      @Override
+      public void onThrowable(Throwable t) {
+        scalaPromise.failure(t);
+      }
+    });
     return Promise.wrap(scalaPromise.future());
   }
 }

@@ -66,7 +66,7 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
       Promise<me.tfeng.play.security.oauth2.Authentication> promise =
           OAuth2Plugin.getInstance().getAuthenticationManager().authenticate(token);
       return promise.flatMap(authentication -> {
-        LOG.info("Authenticated successfully");
+        LOG.info("Authentication completed");
         org.springframework.security.oauth2.provider.OAuth2Authentication oauth2Authentication =
             new org.springframework.security.oauth2.provider.OAuth2Authentication(
                 getOAuth2Request(authentication.getClient()),

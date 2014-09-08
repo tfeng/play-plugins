@@ -30,6 +30,7 @@ import me.tfeng.play.avro.AvroHelper;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.ipc.AsyncHttpTransceiver;
+import org.apache.avro.ipc.AsyncTransceiver;
 import org.apache.avro.ipc.IpcRequestor;
 import org.apache.avro.specific.SpecificData;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -52,19 +53,27 @@ public class AvroPlugin extends AbstractPlugin {
     super(application);
   }
 
-  public <T> T client(Class<T> interfaceClass, URL url) {
-    return client(interfaceClass, url, new SpecificData(interfaceClass.getClassLoader()));
+  public <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver) {
+    return client(interfaceClass, transceiver, new SpecificData(interfaceClass.getClassLoader()));
   }
 
   @SuppressWarnings("unchecked")
-  public <T> T client(Class<T> interfaceClass, URL url, SpecificData data) {
+  public <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver, SpecificData data) {
     try {
       Protocol protocol = AvroHelper.getProtocol(interfaceClass);
       return (T) Proxy.newProxyInstance(data.getClassLoader(), new Class[] { interfaceClass },
-          new IpcRequestor(protocol, new AsyncHttpTransceiver(url), data));
+          new IpcRequestor(protocol, transceiver, data));
     } catch (IOException e) {
       throw new RuntimeException("Unable to create async client", e);
     }
+  }
+
+  public <T> T client(Class<T> interfaceClass, URL url) {
+    return client(interfaceClass, new AsyncHttpTransceiver(url));
+  }
+
+  public <T> T client(Class<T> interfaceClass, URL url, SpecificData data) {
+    return client(interfaceClass, new AsyncHttpTransceiver(url), data);
   }
 
   public Map<Class<?>, Object> getProtocolImplementations() {
