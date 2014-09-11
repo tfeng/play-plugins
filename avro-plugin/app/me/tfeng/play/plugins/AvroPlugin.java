@@ -53,12 +53,12 @@ public class AvroPlugin extends AbstractPlugin {
     super(application);
   }
 
-  public <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver) {
+  public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver) {
     return client(interfaceClass, transceiver, new SpecificData(interfaceClass.getClassLoader()));
   }
 
   @SuppressWarnings("unchecked")
-  public <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver, SpecificData data) {
+  public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver, SpecificData data) {
     try {
       Protocol protocol = AvroHelper.getProtocol(interfaceClass);
       return (T) Proxy.newProxyInstance(data.getClassLoader(), new Class[] { interfaceClass },
@@ -68,11 +68,11 @@ public class AvroPlugin extends AbstractPlugin {
     }
   }
 
-  public <T> T client(Class<T> interfaceClass, URL url) {
+  public static <T> T client(Class<T> interfaceClass, URL url) {
     return client(interfaceClass, new AsyncHttpTransceiver(url));
   }
 
-  public <T> T client(Class<T> interfaceClass, URL url, SpecificData data) {
+  public static <T> T client(Class<T> interfaceClass, URL url, SpecificData data) {
     return client(interfaceClass, new AsyncHttpTransceiver(url), data);
   }
 

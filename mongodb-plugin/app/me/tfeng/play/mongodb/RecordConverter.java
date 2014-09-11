@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
-import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericData.Record;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.IndexedRecord;
@@ -39,11 +38,6 @@ import org.apache.avro.specific.SpecificDatumReader;
 import org.bson.types.Binary;
 import org.mortbay.util.ajax.JSON;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.NullNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 
@@ -57,73 +51,6 @@ public class RecordConverter {
   public static final String MONGO_NAME_PROPERTY = "mongo-name";
 
   public static final String MONGO_TYPE_PROPERTY = "mongo-type";
-
-  private static final JsonNodeFactory NODE_FACTORY = new JsonNodeFactory(false);
-
-  @SuppressWarnings("unchecked")
-  public static JsonNode toAvroJson(Schema schema, Object dbObject) {
-    switch (schema.getType()) {
-    case NULL:
-      return NODE_FACTORY.nullNode();
-    case ENUM:
-    case FIXED:
-    case STRING:
-      return NODE_FACTORY.textNode((String) dbObject);
-    case BOOLEAN:
-      return NODE_FACTORY.booleanNode((Boolean) dbObject);
-    case INT:
-      return NODE_FACTORY.numberNode(((Number) dbObject).intValue());
-    case LONG:
-      return NODE_FACTORY.numberNode(((Number) dbObject).longValue());
-    case FLOAT:
-      return NODE_FACTORY.numberNode(((Number) dbObject).floatValue());
-    case DOUBLE:
-      return NODE_FACTORY.numberNode(((Number) dbObject).doubleValue());
-    case ARRAY: {
-      List<Object> list = (List<Object>) dbObject;
-      ArrayNode arrayNode = NODE_FACTORY.arrayNode();
-      list.forEach(element -> arrayNode.add(toAvroJson(schema.getElementType(), element)));
-      return arrayNode;
-    }
-    case MAP: {
-      Map<String, Object> map = (Map<String, Object>) dbObject;
-      ObjectNode mapNode = NODE_FACTORY.objectNode();
-      map.entrySet().forEach(entry -> mapNode.put(entry.getKey(),
-          toAvroJson(schema.getValueType(), entry.getValue())));
-      return mapNode;
-    }
-    case RECORD: {
-      Map<String, Object> map = (Map<String, Object>) dbObject;
-      ObjectNode recordNode = NODE_FACTORY.objectNode();
-      for (Field field : schema.getFields()) {
-        Object value = map.get(field.name());
-        if (value == null) {
-          recordNode.put(field.name(), NullNode.instance);
-        } else {
-          recordNode.put(field.name(), toAvroJson(field.schema(), value));
-        }
-      }
-      return recordNode;
-    }
-    case UNION: {
-      List<Schema> types = schema.getTypes();
-      if (types.size() != 2 || !types.stream().anyMatch(type -> type.getType() == Type.NULL)) {
-        throw new RuntimeException(
-            "MongoDb plugin can only handle union of null and one other type; schema " + schema
-            + " is not supported");
-      }
-      Schema actualSchema = types.get(0).getType() == Type.NULL ? types.get(1) : types.get(0);
-      ObjectNode mapNode = NODE_FACTORY.objectNode();
-      mapNode.put(actualSchema.getFullName(), toAvroJson(actualSchema, dbObject));
-      return mapNode;
-    }
-    case BYTES: {
-      return NODE_FACTORY.binaryNode((byte[]) dbObject);
-    }
-    default:
-      throw new RuntimeException("Unknown Avro type " + schema.getType());
-    }
-  }
 
   public static DBObject toDbObject(IndexedRecord record) {
     DBObject dbObject = new BasicDBObject();
@@ -175,6 +102,8 @@ public class RecordConverter {
       return getDbObjects(schema, (Map<String, Object>) object);
     } else if (object instanceof ByteBuffer) {
       return new Binary(((ByteBuffer) object).array());
+    } else if (object.getClass().isEnum()) {
+      return ((Enum<?>) object).name();
     } else {
       String mongoClassName = schema.getProp(MONGO_CLASS_PROPERTY);
       String mongoType = schema.getProp(MONGO_TYPE_PROPERTY);

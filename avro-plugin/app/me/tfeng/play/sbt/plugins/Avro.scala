@@ -18,18 +18,20 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.plugins
+package me.tfeng.play.sbt.plugins
 
+import me.tfeng.play.plugins.Versions
+import me.tfeng.sbt.plugins.SbtAvro
 import sbt.{AutoPlugin, addSbtPlugin, toGroupID}
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-object AvroD2 extends AutoPlugin {
+object Avro extends AutoPlugin {
 
   override lazy val projectSettings = settings
 
-  lazy val settings = Avro.settings ++ Seq(
-      addSbtPlugin("me.tfeng.play-plugins" % "avro-d2-plugin" % Versions.project)
+  lazy val settings = SbtAvro.settings ++ Seq(
+      addSbtPlugin("me.tfeng.play-plugins" % "avro-plugin" % Versions.project)
   )
 }

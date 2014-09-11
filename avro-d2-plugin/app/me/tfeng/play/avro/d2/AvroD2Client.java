@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import me.tfeng.play.avro.AvroHelper;
+import me.tfeng.play.plugins.AvroD2Plugin;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.ipc.IpcRequestor;
@@ -51,15 +52,12 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   private final Protocol protocol;
   private final IpcRequestor requestor;
   private final List<URL> serverUrls = new ArrayList<>();
-  private final ZooKeeper zk;
 
-  public AvroD2Client(ZooKeeper zk, Class<?> interfaceClass) {
-    this(zk, interfaceClass, new SpecificData(interfaceClass.getClassLoader()));
+  public AvroD2Client(Class<?> interfaceClass) {
+    this(interfaceClass, new SpecificData(interfaceClass.getClassLoader()));
   }
 
-  public AvroD2Client(ZooKeeper zk, Class<?> interfaceClass, SpecificData data) {
-    this.zk = zk;
-
+  public AvroD2Client(Class<?> interfaceClass, SpecificData data) {
     protocol = AvroHelper.getProtocol(interfaceClass);
     refresh();
 
@@ -100,6 +98,8 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   public void refresh() {
     String path = AvroD2Helper.getZkPath(protocol);
+    ZooKeeper zk = AvroD2Plugin.getInstance().getZooKeeper();
+
     List<String> children;
     try {
       children = zk.getChildren(path, this);

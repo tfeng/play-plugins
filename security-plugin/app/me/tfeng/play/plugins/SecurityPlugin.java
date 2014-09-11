@@ -20,6 +20,7 @@
 
 package me.tfeng.play.plugins;
 
+import me.tfeng.play.security.CacheSecurityContextStore;
 import me.tfeng.play.security.SecurityContextStore;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,8 +41,8 @@ public class SecurityPlugin extends AbstractPlugin {
   @Value("${security-plugin.expiration-in-seconds:3600}")
   private int expirationInSeconds;
 
-  @Autowired
-  private SecurityContextStore securityContextStore;
+  @Autowired(required = false)
+  private SecurityContextStore securityContextStore = new CacheSecurityContextStore();
 
   @Value("${security-plugin.security-cookie:seco}")
   private String securityCookie;

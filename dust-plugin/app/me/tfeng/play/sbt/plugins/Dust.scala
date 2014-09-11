@@ -18,19 +18,20 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.plugins
+package me.tfeng.play.sbt.plugins
 
-import me.tfeng.sbt.plugins.SbtAvro
+import me.tfeng.play.plugins.Versions
+import me.tfeng.sbt.plugins.SbtDust
 import sbt.{AutoPlugin, addSbtPlugin, toGroupID}
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-object Avro extends AutoPlugin {
+object Dust extends AutoPlugin {
 
   override lazy val projectSettings = settings
 
-  lazy val settings = SbtAvro.settings ++ Seq(
-      addSbtPlugin("me.tfeng.play-plugins" % "avro-plugin" % Versions.project)
+  lazy val settings = SbtDust.settings ++ Seq(
+      addSbtPlugin("me.tfeng.play-plugins" % "dust-plugin" % Versions.project)
   )
 }

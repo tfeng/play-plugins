@@ -17,5 +17,9 @@ protocol AuthenticationManager {
     union { null, UserAuthentication } user;
   }
 
-  Authentication authenticate(string token);
+  error AuthenticationError {
+    string message;
+  }
+
+  Authentication authenticate(string token) throws AuthenticationError;
 }

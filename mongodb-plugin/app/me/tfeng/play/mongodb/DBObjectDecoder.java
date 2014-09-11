@@ -200,8 +200,14 @@ public class DBObjectDecoder extends Decoder {
   public ByteBuffer readBytes(ByteBuffer old) throws IOException {
     jumpToNextField();
     try {
-      byte[] bytes = ((Binary) iteratorStack.peek().next()).getData();
-      return ByteBuffer.wrap(bytes);
+      Object next = iteratorStack.peek().next();
+      if (next == null) {
+        return null;
+      } else if (next instanceof Binary) {
+        return ByteBuffer.wrap(((Binary) next).getData());
+      } else {
+        return ByteBuffer.wrap((byte[]) next);
+      }
     } finally {
       finishRead();
     }

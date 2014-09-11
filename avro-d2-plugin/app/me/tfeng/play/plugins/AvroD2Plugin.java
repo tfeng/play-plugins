@@ -53,6 +53,27 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
 
   private static final ALogger LOG = Logger.of(AvroD2Plugin.class);
 
+  public static <T> T client(Class<T> interfaceClass) {
+    return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()));
+  }
+
+  public static <T> T client(Class<T> interfaceClass, SpecificData data) {
+    URI uri = AvroD2Helper.getUri(AvroHelper.getProtocol(interfaceClass));
+    AvroD2Plugin plugin = AvroD2Plugin.getInstance();
+
+    AvroD2Client client;
+    synchronized (plugin.clients) {
+      client = plugin.clients.get(uri);
+      if (client == null) {
+        client = new AvroD2Client(interfaceClass, data);
+        plugin.clients.put(uri, client);
+      }
+    }
+
+    return interfaceClass.cast(Proxy.newProxyInstance(interfaceClass.getClassLoader(),
+        new Class<?>[] { interfaceClass }, client));
+  }
+
   public static AvroD2Plugin getInstance() {
     return Play.application().plugin(AvroD2Plugin.class);
   }
@@ -81,19 +102,8 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     super(application);
   }
 
-  public <T> T client(Class<T> interfaceClass) {
-    return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()));
-  }
-
-  public <T> T client(Class<T> interfaceClass, SpecificData data) {
-    URI uri = AvroD2Helper.getUri(AvroHelper.getProtocol(interfaceClass));
-    AvroD2Client client = clients.get(uri);
-    if (client == null) {
-      client = new AvroD2Client(zk, interfaceClass, data);
-      clients.put(uri, client);
-    }
-    return interfaceClass.cast(Proxy.newProxyInstance(interfaceClass.getClassLoader(),
-        new Class<?>[] { interfaceClass }, client));
+  public ZooKeeper getZooKeeper() {
+    return zk;
   }
 
   @Override

@@ -26,6 +26,7 @@ import java.io.IOException;
 import org.apache.avro.Protocol;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.IndexedRecord;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.io.JsonEncoder;
@@ -46,6 +47,11 @@ public class AvroHelper {
 
   public static Schema getSchema(Class<?> schemaClass) {
     return new SpecificData(schemaClass.getClassLoader()).getSchema(schemaClass);
+  }
+
+  public static String toJson(IndexedRecord record) throws IOException {
+    Schema schema = record.getSchema();
+    return toJson(schema, record);
   }
 
   public static String toJson(Schema schema, Object object) throws IOException {
