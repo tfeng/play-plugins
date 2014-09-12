@@ -20,10 +20,19 @@
 
 package me.tfeng.play.plugins;
 
+import java.lang.reflect.InvocationTargetException;
+
+import me.tfeng.play.security.oauth2.AuthenticationError;
 import me.tfeng.play.security.oauth2.AuthenticationManagerClient;
 
+import org.apache.avro.ipc.AsyncHttpException;
+import org.apache.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.common.exceptions.ClientAuthenticationException;
+import org.springframework.security.oauth2.provider.ClientRegistrationException;
 
 import play.Application;
 import play.Play;
@@ -35,6 +44,32 @@ public class OAuth2Plugin extends AbstractPlugin {
 
   public static OAuth2Plugin getInstance() {
     return Play.application().plugin(OAuth2Plugin.class);
+  }
+
+  public static boolean isAuthenticationError(Throwable t) {
+    if (t instanceof AccessDeniedException
+        || t instanceof AuthenticationException
+        || t instanceof ClientAuthenticationException
+        || t instanceof ClientRegistrationException
+        || t instanceof AuthenticationError
+        || (t instanceof AsyncHttpException)
+            && ((AsyncHttpException) t).getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+      return true;
+    }
+
+    Throwable cause = t.getCause();
+    if (cause != t && cause != null && isAuthenticationError(cause)) {
+      return true;
+    }
+
+    if (t instanceof InvocationTargetException) {
+      Throwable target = ((InvocationTargetException) t).getTargetException();
+      if (isAuthenticationError(target)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   @Autowired

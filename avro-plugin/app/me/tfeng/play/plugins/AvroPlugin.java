@@ -34,9 +34,12 @@ import org.apache.avro.ipc.AsyncTransceiver;
 import org.apache.avro.ipc.IpcRequestor;
 import org.apache.avro.specific.SpecificData;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.annotation.Value;
 
 import play.Application;
 import play.Play;
+import play.libs.Akka;
+import scala.concurrent.ExecutionContext;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -48,6 +51,15 @@ public class AvroPlugin extends AbstractPlugin {
   }
 
   private Map<Class<?>, Object> protocolImplementations;
+
+  @Value("${avro-plugin.ipc-execution-context:play.akka.actor.default-dispatcher}")
+  private String ipcExecutionContextId;
+
+  private ExecutionContext ipcExecutionContext;
+
+  public ExecutionContext getIpcExecutionContext() {
+    return ipcExecutionContext;
+  }
 
   public AvroPlugin(Application application) {
     super(application);
@@ -85,6 +97,7 @@ public class AvroPlugin extends AbstractPlugin {
   public void onStart() {
     super.onStart();
 
+    ipcExecutionContext = Akka.system().dispatchers().lookup(ipcExecutionContextId);
     try {
       protocolImplementations =
           getApplicationContext().getBean("avro-plugin.protocol-implementations", Map.class);

@@ -27,6 +27,10 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 import play.Application;
 import play.GlobalSettings;
+import play.libs.F.Promise;
+import play.mvc.Http.RequestHeader;
+import play.mvc.Result;
+import play.mvc.Results;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -40,6 +44,11 @@ public class SpringGlobalSettings extends GlobalSettings {
     } catch (Exception e) {
       return null;
     }
+  }
+
+  @Override
+  public Promise<Result> onError(RequestHeader request, Throwable t) {
+    return Promise.pure(Results.badRequest());
   }
 
   @Override

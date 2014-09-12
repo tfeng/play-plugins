@@ -21,15 +21,18 @@
 package org.apache.avro.ipc;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
 
+import me.tfeng.play.plugins.AvroPlugin;
 import me.tfeng.play.plugins.HttpPlugin;
 
 import org.apache.avro.AvroRemoteException;
@@ -60,10 +63,14 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
     HttpTransceiver.writeBuffers(buffers, out);
   }
 
-  private String[] preservedHeaders = DEFAULT_PRESERVED_HEADERS;
+  private Map<String, String> extraHeaders;
 
+  private String[] preservedHeaders = DEFAULT_PRESERVED_HEADERS;
   private Promise<WSResponse> promise;
+  private final Semaphore semaphore = new Semaphore(1);
+
   private int timeout = HttpPlugin.getInstance().getRequestTimeout();
+
   private final URL url;
 
   public AsyncHttpTransceiver(URL url) {
@@ -76,12 +83,7 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
       try {
         int status = response.getStatus();
         if (status >= 400) {
-          if (status == 404 || status == 410) {
-            throw new FileNotFoundException(url.toString());
-          } else {
-            throw new IOException("Server returned HTTP response code: " + status + " for URL: " +
-                  url.toString());
-          }
+          throw new AsyncHttpException(status, url);
         }
         InputStream stream = response.getBodyAsStream();
         return readBuffers(stream);
@@ -93,11 +95,40 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
 
   @Override
   public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request) throws IOException {
-    lockChannel();
-    writeBuffers(request);
-    return asyncReadBuffers().transform(
-        response -> { unlockChannel(); return response; },
-        throwable -> { unlockChannel(); return throwable; });
+    Map<String, String> headers = null;
+    if (preservedHeaders != null && preservedHeaders.length > 0) {
+      Request currentRequest = null;
+      try {
+        currentRequest = Controller.request();
+      } catch (RuntimeException e) {
+        LOG.info("Unable to get current request; do not pass headers to downstream calls");
+      }
+      if (currentRequest != null) {
+        headers = new HashMap<>(preservedHeaders.length);
+        for (String preservedHeader : preservedHeaders) {
+          headers.put(preservedHeader, currentRequest.getHeader(preservedHeader));
+        }
+      }
+    }
+    Map<String, String> extraHeaders = headers;
+
+    return Promise.promise(() -> {
+      semaphore.acquire();
+      this.extraHeaders = extraHeaders;
+      writeBuffers(request);
+      return this;
+    }, AvroPlugin.getInstance().getIpcExecutionContext()).flatMap(transceiver -> {
+      Promise<List<ByteBuffer>> promise = transceiver.asyncReadBuffers();
+      promise.onFailure(throwable -> {
+        this.extraHeaders = null;
+        transceiver.semaphore.release();
+      });
+      promise.onRedeem(response -> {
+        this.extraHeaders = null;
+        transceiver.semaphore.release();
+      });
+      return promise;
+    });
   }
 
   @Override
@@ -126,26 +157,17 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
     return CONTENT_TYPE;
   }
 
-  protected Consumer<AsyncHttpClient.BoundRequestBuilder> getRequestPreparer(URL url, byte[] body) {
+  protected Consumer<AsyncHttpClient.BoundRequestBuilder> getRequestPreparer(URL url, byte[] body,
+      Map<String, String> extraHeaders) {
     return builder -> {
-      if (preservedHeaders != null && preservedHeaders.length > 0) {
-        Request request = null;
-        try {
-          request = Controller.request();
-        } catch (RuntimeException e) {
-          LOG.info("Unable to get current request; do not pass headers to downstream calls");
-        }
-        if (request != null) {
-          for (String preservedHeader : preservedHeaders) {
-            builder.setHeader(preservedHeader, request.getHeader(preservedHeader));
-          }
-        }
+      if (extraHeaders != null) {
+        extraHeaders.forEach((key, value) -> builder.setHeader(key, value));
       }
     };
   }
 
   protected Promise<WSResponse> postRequest(URL url, byte[] body) throws IOException {
     return HttpPlugin.getInstance().postRequest(url, getContentType(), body,
-        getRequestPreparer(url, body));
+        getRequestPreparer(url, body, extraHeaders));
   }
 }

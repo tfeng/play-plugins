@@ -20,15 +20,18 @@
 
 package me.tfeng.play.security.oauth2;
 
+import java.lang.reflect.Method;
+
+import me.tfeng.play.plugins.OAuth2Plugin;
 import me.tfeng.play.spring.SpringGlobalSettings;
 
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.oauth2.common.exceptions.ClientAuthenticationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.common.exceptions.OAuth2Exception;
-import org.springframework.security.oauth2.provider.ClientRegistrationException;
 
 import play.libs.F.Promise;
+import play.mvc.Action;
+import play.mvc.Http.Context;
+import play.mvc.Http.Request;
 import play.mvc.Http.RequestHeader;
 import play.mvc.Result;
 import play.mvc.Results;
@@ -38,18 +41,32 @@ import play.mvc.Results;
  */
 public class OAuth2GlobalSettings extends SpringGlobalSettings {
 
+  @Value("${oauth2-plugin.authenticate-all:true}")
+  private boolean authenticateAll;
+
   @Override
   public Promise<Result> onError(RequestHeader request, Throwable t) {
     Throwable cause = t.getCause();
-    if (cause instanceof AccessDeniedException
-        || cause instanceof AuthenticationException
-        || cause instanceof ClientAuthenticationException
-        || cause instanceof ClientRegistrationException) {
+    if (OAuth2Plugin.isAuthenticationError(t)) {
       return Promise.pure(Results.unauthorized());
     } else if (cause instanceof OAuth2Exception) {
       return Promise.pure(Results.status(((OAuth2Exception) cause).getHttpErrorCode()));
     } else {
       return super.onError(request, t);
     }
+  }
+
+  @Override
+  public Action<Void> onRequest(Request request, Method actionMethod) {
+    return new Action.Simple() {
+      @Override
+      public Promise<Result> call(Context context) throws Throwable {
+        if (authenticateAll) {
+          return OAuth2AuthenticationAction.authorizeAndCall(context, delegate);
+        } else {
+          return delegate.call(context);
+        }
+      }
+    };
   }
 }

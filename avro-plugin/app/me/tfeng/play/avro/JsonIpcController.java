@@ -26,6 +26,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -102,6 +103,8 @@ public class JsonIpcController extends Controller {
 
   private static final Method RESPONSE_GETRESPONSE_METHOD;
 
+  private static final Charset UTF8 = Charset.forName("utf-8");
+
   static {
     try {
       Class<?> requestClass =
@@ -148,9 +151,8 @@ public class JsonIpcController extends Controller {
     List<ByteBuffer> buffers = convertToBuffers(request);
     Responder responder = new SpecificResponder(protocolClass, implementation);
 
-    List<ByteBuffer> responseBuffers = responder.respond(buffers);
-
     try {
+      List<ByteBuffer> responseBuffers = responder.respond(buffers);
       Object response = getResponse(requestor, request, responseBuffers);
       return Results.ok(
           AvroHelper.toJson(avroProtocol.getMessages().get(message).getResponse(), response));
@@ -199,13 +201,17 @@ public class JsonIpcController extends Controller {
     }
   }
 
-  private static Object getRequest(Requestor requestor, Protocol protocol, String message, byte[] data)
-      throws Throwable {
+  private static Object getRequest(Requestor requestor, Protocol protocol, String message,
+      byte[] data) throws Throwable {
     Message messageObject = protocol.getMessages().get(message);
     if (messageObject == null) {
       throw new AvroRuntimeException("No message named "+ message + " in "+ protocol);
     }
     Schema schema = messageObject.getRequest();
+    if (schema.getType() == Type.RECORD && schema.getFields().isEmpty()) {
+      // The method takes no argument; use empty data.
+      data = "{}".getBytes(UTF8);
+    }
     JsonNode node = Json.parse(new ByteArrayInputStream(data));
     node = enhanceWithDefaultFields(schema, node, new JsonNodeFactory(false));
     GenericDatumReader<Object> reader = new GenericDatumReader<Object>(schema);

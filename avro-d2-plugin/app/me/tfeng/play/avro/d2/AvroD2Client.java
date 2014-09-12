@@ -48,9 +48,11 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   private static final ALogger LOG = Logger.of(AvroD2Client.class);
 
+  private final SpecificData data;
+  private final Class<?> interfaceClass;
   private int lastIndex = -1;
   private final Protocol protocol;
-  private final IpcRequestor requestor;
+  private IpcRequestor requestor;
   private final List<URL> serverUrls = new ArrayList<>();
 
   public AvroD2Client(Class<?> interfaceClass) {
@@ -58,15 +60,9 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   }
 
   public AvroD2Client(Class<?> interfaceClass, SpecificData data) {
+    this.interfaceClass = interfaceClass;
+    this.data = data;
     protocol = AvroHelper.getProtocol(interfaceClass);
-    refresh();
-
-    try {
-      requestor = new IpcRequestor(interfaceClass, new AvroD2Transceiver(this), data);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to initialize Avro requestor for "
-          + AvroD2Helper.getUri(protocol), e);
-    }
   }
 
   public URL getNextServerUrl() {
@@ -84,6 +80,15 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    if (requestor == null) {
+      refresh();
+      try {
+        requestor = new IpcRequestor(interfaceClass, new AvroD2Transceiver(this), data);
+      } catch (IOException e) {
+        throw new RuntimeException("Unable to initialize Avro requestor for "
+            + AvroD2Helper.getUri(protocol), e);
+      }
+    }
     return requestor.invoke(proxy, method, args);
   }
 

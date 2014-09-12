@@ -24,6 +24,7 @@ import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import org.apache.avro.specific.SpecificData;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Value;
 
 import play.Application;
@@ -111,7 +113,11 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
   public void onStart() {
     super.onStart();
 
-    protocolPaths = getApplicationContext().getBean("avro-d2-plugin.protocol-paths", Map.class);
+    try {
+      protocolPaths = getApplicationContext().getBean("avro-d2-plugin.protocol-paths", Map.class);
+    } catch(NoSuchBeanDefinitionException e) {
+      protocolPaths = Collections.emptyMap();
+    }
 
     try {
       zk = new ZooKeeper(zkConnectString, zkSessionTimeout, this);

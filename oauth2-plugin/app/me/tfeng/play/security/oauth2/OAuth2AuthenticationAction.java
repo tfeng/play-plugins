@@ -26,7 +26,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import me.tfeng.play.plugins.OAuth2Plugin;
+import me.tfeng.play.plugins.SpringPlugin;
 
+import org.springframework.context.event.ApplicationEventMulticaster;
+import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -40,6 +45,8 @@ import play.mvc.Action;
 import play.mvc.Http.Context;
 import play.mvc.Http.Request;
 import play.mvc.Result;
+import play.mvc.Results;
+
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -54,14 +61,36 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
 
   private static final ALogger LOG = Logger.of(OAuth2AuthenticationAction.class);
 
-  @Override
-  public Promise<Result> call(Context context) throws Throwable {
+  protected static Promise<Result> authorizeAndCall(Context context, Action<?> delegate)
+      throws Throwable {
     Request request = context.request();
     String token = getAuthorizationToken(request);
+    ApplicationEventMulticaster multicaster =
+        SpringPlugin.getInstance().getApplicationContext().getBean(
+            AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME,
+            ApplicationEventMulticaster.class);
+
     if (token == null) {
       LOG.info("Authentication skipped");
       SecurityContextHolder.clearContext();
-      return delegate.call(context);
+      AuthenticationCredentialsNotFoundEventListener
+          authenticationCredentialsNotFoundEventListener =
+              new AuthenticationCredentialsNotFoundEventListener(context.id());
+      try {
+        multicaster.addApplicationListener(authenticationCredentialsNotFoundEventListener);
+        return delegate.call(context);
+      } catch (Exception e) {
+        AuthenticationCredentialsNotFoundException authenticationCredentialsNotFoundException =
+            authenticationCredentialsNotFoundEventListener.getException();
+        if (authenticationCredentialsNotFoundException == null) {
+          throw e;
+        } else {
+          return Promise.pure(Results.unauthorized());
+        }
+      } finally {
+        multicaster.removeApplicationListener(authenticationCredentialsNotFoundEventListener);
+      }
+
     } else {
       Promise<me.tfeng.play.security.oauth2.Authentication> promise =
           OAuth2Plugin.getInstance().getAuthenticationManager().authenticate(token);
@@ -72,16 +101,36 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
                 getOAuth2Request(authentication.getClient()),
                 getAuthentication(authentication.getUser()));
         SecurityContextHolder.getContext().setAuthentication(oauth2Authentication);
+        AuthorizationFailureEventListener authorizationFailureEventListener =
+            new AuthorizationFailureEventListener(context.id());
+        multicaster.addApplicationListener(authorizationFailureEventListener);
         try {
           return delegate.call(context);
+        } catch (Exception e) {
+          AccessDeniedException accessDeniedException =
+              authorizationFailureEventListener.getException();
+          if (accessDeniedException == null) {
+            throw e;
+          } else {
+            LOG.warn("Authentication failed", e);
+            return Promise.pure(Results.unauthorized());
+          }
         } finally {
+          multicaster.removeApplicationListener(authorizationFailureEventListener);
           SecurityContextHolder.clearContext();
+        }
+      }).recover(t -> {
+        if (OAuth2Plugin.isAuthenticationError(t)) {
+          LOG.warn("Authentication failed", t);
+          return Results.unauthorized();
+        } else {
+          throw t;
         }
       });
     }
   }
 
-  protected UsernamePasswordAuthenticationToken getAuthentication(UserAuthentication user) {
+  protected static UsernamePasswordAuthenticationToken getAuthentication(UserAuthentication user) {
     if (user == null) {
       return null;
     } else {
@@ -92,7 +141,7 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
     }
   }
 
-  protected String getAuthorizationToken(Request request) {
+  protected static String getAuthorizationToken(Request request) {
     String[] headers = request.headers().get(AUTHORIZATION);
     if (headers != null) {
       for (String header : headers) {
@@ -105,7 +154,7 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
     return request.getQueryString(ACCESS_TOKEN);
   }
 
-  protected OAuth2Request getOAuth2Request(ClientAuthentication client) {
+  protected static OAuth2Request getOAuth2Request(ClientAuthentication client) {
     List<GrantedAuthority> authorities = client.getAuthorities().stream()
         .map(authority -> new SimpleGrantedAuthority(authority.toString()))
         .collect(Collectors.toList());
@@ -122,5 +171,10 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
         null,
         Collections.emptySet(),
         Collections.emptyMap());
+  }
+
+  @Override
+  public Promise<Result> call(Context context) throws Throwable {
+    return authorizeAndCall(context, delegate);
   }
 }
