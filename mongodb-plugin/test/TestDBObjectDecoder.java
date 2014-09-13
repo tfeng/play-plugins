@@ -255,7 +255,7 @@ public class TestDBObjectDecoder {
     DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
     String mongoString = JSON.serialize(mongoObject);
 
-    String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31 17:09:34.033\", \"date2\": 1409476174033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
+    String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31T08:09:34.033Z\", \"date2\": 1409440174033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
     SpecificDatumReader<Types1> reader = new SpecificDatumReader<Types1>(schema);
     Types1 types1 = reader.read(null, decoder);
@@ -264,8 +264,8 @@ public class TestDBObjectDecoder {
     object.put("_id", new ObjectId("5401bf578de2a77380c5489a"));
     object.put("bsonTimestamp1", new BSONTimestamp(1409385948, 1));
     object.put("bsonTimestamp2", new BSONTimestamp(1409385948, 1));
-    object.put("date1", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
-    object.put("date2", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    object.put("date1", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
+    object.put("date2", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
     object.put("mongoString", mongoObject);
     Types1 types2 = RecordConverter.toRecord(Types1.class, object);
 
@@ -275,10 +275,10 @@ public class TestDBObjectDecoder {
     assertThat(types2.getBsonTimestamp1().toString()).isEqualTo("(1409385948, 1)");
     assertThat(types1.getBsonTimestamp2()).isEqualTo(1409385948001l);
     assertThat(types2.getBsonTimestamp2()).isEqualTo(1409385948001l);
-    assertThat(types1.getDate1().toString()).isEqualTo("2014-08-31 17:09:34.033");
-    assertThat(types2.getDate1().toString()).isEqualTo("2014-08-31 17:09:34.033");
-    assertThat(types1.getDate2()).isEqualTo(1409476174033l);
-    assertThat(types2.getDate2()).isEqualTo(1409476174033l);
+    assertThat(types1.getDate1().toString()).isEqualTo("2014-08-31T08:09:34.033Z");
+    assertThat(types2.getDate1().toString()).isEqualTo("2014-08-31T08:09:34.033Z");
+    assertThat(types1.getDate2()).isEqualTo(1409440174033l);
+    assertThat(types2.getDate2()).isEqualTo(1409440174033l);
     assertThat(types1.getMongoString().toString()).isEqualTo(mongoString);
     assertThat(types2.getMongoString().toString()).isEqualTo(mongoString);
 
@@ -292,13 +292,13 @@ public class TestDBObjectDecoder {
     assertThat(object1.get("bsonTimestamp2")).isEqualTo(new BSONTimestamp(1409385948, 1));
     assertThat(object2.get("bsonTimestamp2")).isEqualTo(new BSONTimestamp(1409385948, 1));
     assertThat(object1.get("date1")).isEqualTo(
-        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
     assertThat(object2.get("date1")).isEqualTo(
-        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
     assertThat(object1.get("date2")).isEqualTo(
-        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
     assertThat(object2.get("date2")).isEqualTo(
-        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
     assertThat(object1.get("mongoString")).isEqualTo(mongoObject);
     assertThat(object2.get("mongoString")).isEqualTo(mongoObject);
   }
@@ -309,7 +309,7 @@ public class TestDBObjectDecoder {
     DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
     String mongoString = JSON.serialize(mongoObject);
 
-    String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31 17:09:34.033\", \"date2\": 1409476174033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
+    String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31T08:09:34.033Z\", \"date2\": 1409440174033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
     SpecificDatumReader<Types2> reader = new SpecificDatumReader<Types2>(schema);
     Types2 types1 = reader.read(null, decoder);
@@ -318,8 +318,8 @@ public class TestDBObjectDecoder {
     object.put("_id", new ObjectId("5401bf578de2a77380c5489a"));
     object.put("bsonTimestamp1", new BSONTimestamp(1409385948, 1));
     object.put("bsonTimestamp2", new BSONTimestamp(1409385948, 1));
-    object.put("date1", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
-    object.put("date2", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+    object.put("date1", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
+    object.put("date2", MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
     object.put("mongoString", mongoObject);
     Types2 types2 = RecordConverter.toRecord(Types2.class, object);
 
@@ -329,10 +329,10 @@ public class TestDBObjectDecoder {
     assertThat(types2.getBsonTimestamp1().toString()).isEqualTo("(1409385948, 1)");
     assertThat(types1.getBsonTimestamp2()).isEqualTo(1409385948001l);
     assertThat(types2.getBsonTimestamp2()).isEqualTo(1409385948001l);
-    assertThat(types1.getDate1().toString()).isEqualTo("2014-08-31 17:09:34.033");
-    assertThat(types2.getDate1().toString()).isEqualTo("2014-08-31 17:09:34.033");
-    assertThat(types1.getDate2()).isEqualTo(1409476174033l);
-    assertThat(types2.getDate2()).isEqualTo(1409476174033l);
+    assertThat(types1.getDate1().toString()).isEqualTo("2014-08-31T08:09:34.033Z");
+    assertThat(types2.getDate1().toString()).isEqualTo("2014-08-31T08:09:34.033Z");
+    assertThat(types1.getDate2()).isEqualTo(1409440174033l);
+    assertThat(types2.getDate2()).isEqualTo(1409440174033l);
     assertThat(types1.getMongoString().toString()).isEqualTo(mongoString);
     assertThat(types2.getMongoString().toString()).isEqualTo(mongoString);
 
@@ -346,13 +346,13 @@ public class TestDBObjectDecoder {
     assertThat(object1.get("bsonTimestamp2")).isEqualTo(new BSONTimestamp(1409385948, 1));
     assertThat(object2.get("bsonTimestamp2")).isEqualTo(new BSONTimestamp(1409385948, 1));
     assertThat(object1.get("date1")).isEqualTo(
-        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
     assertThat(object2.get("date1")).isEqualTo(
-        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
     assertThat(object1.get("date2")).isEqualTo(
-        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
     assertThat(object2.get("date2")).isEqualTo(
-        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31 17:09:34.033"));
+        MongoDbTypeConverter.DATE_FORMAT.parse("2014-08-31T08:09:34.033Z"));
     assertThat(object1.get("mongoString")).isEqualTo(mongoObject);
     assertThat(object2.get("mongoString")).isEqualTo(mongoObject);
   }

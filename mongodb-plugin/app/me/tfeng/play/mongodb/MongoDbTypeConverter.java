@@ -36,6 +36,7 @@ import org.bson.types.ObjectId;
 import com.google.common.collect.ImmutableMap;
 import com.mongodb.DBObject;
 import com.mongodb.util.JSON;
+import com.mongodb.util.JSONCallback;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -138,7 +139,7 @@ public class MongoDbTypeConverter {
           .put(ImmutablePair.of(ObjectId.class, String.class), new ObjectIdToStringConverter())
           .build();
 
-  public static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+  public static final DateFormat DATE_FORMAT = new SimpleDateFormat(JSONCallback._msDateFormat);
 
   public static final Pattern TIMESTAMP_PATTERN = Pattern.compile("\\(([0-9]+),\\s*([0-9]+)\\)");
 
