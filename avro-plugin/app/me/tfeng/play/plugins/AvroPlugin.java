@@ -25,10 +25,8 @@ import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Map;
+import java.util.function.Supplier;
 
-import me.tfeng.play.avro.AvroHelper;
-
-import org.apache.avro.Protocol;
 import org.apache.avro.ipc.AsyncHttpTransceiver;
 import org.apache.avro.ipc.AsyncTransceiver;
 import org.apache.avro.ipc.IpcRequestor;
@@ -46,38 +44,32 @@ import scala.concurrent.ExecutionContext;
  */
 public class AvroPlugin extends AbstractPlugin {
 
-  public static AvroPlugin getInstance() {
-    return Play.application().plugin(AvroPlugin.class);
-  }
-
-  private Map<Class<?>, Object> protocolImplementations;
-
-  @Value("${avro-plugin.ipc-execution-context:play.akka.actor.default-dispatcher}")
-  private String ipcExecutionContextId;
-
-  private ExecutionContext ipcExecutionContext;
-
-  public ExecutionContext getIpcExecutionContext() {
-    return ipcExecutionContext;
-  }
-
-  public AvroPlugin(Application application) {
-    super(application);
-  }
-
   public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver) {
     return client(interfaceClass, transceiver, new SpecificData(interfaceClass.getClassLoader()));
   }
 
+  public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver,
+      SpecificData data) {
+    return client(interfaceClass, transceiver, data, null);
+  }
+
   @SuppressWarnings("unchecked")
-  public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver, SpecificData data) {
+  public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver,
+      SpecificData data, Supplier<Map<String, String>> headersSupplier) {
     try {
-      Protocol protocol = AvroHelper.getProtocol(interfaceClass);
+      IpcRequestor requestor = new IpcRequestor(interfaceClass, transceiver, data);
+      requestor.setHeadersSupplier(headersSupplier);
       return (T) Proxy.newProxyInstance(data.getClassLoader(), new Class[] { interfaceClass },
-          new IpcRequestor(protocol, transceiver, data));
+          requestor);
     } catch (IOException e) {
       throw new RuntimeException("Unable to create async client", e);
     }
+  }
+
+  public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver,
+      Supplier<Map<String, String>> headersSupplier) {
+    return client(interfaceClass, transceiver, new SpecificData(interfaceClass.getClassLoader()),
+        headersSupplier);
   }
 
   public static <T> T client(Class<T> interfaceClass, URL url) {
@@ -86,6 +78,35 @@ public class AvroPlugin extends AbstractPlugin {
 
   public static <T> T client(Class<T> interfaceClass, URL url, SpecificData data) {
     return client(interfaceClass, new AsyncHttpTransceiver(url), data);
+  }
+
+  public static <T> T client(Class<T> interfaceClass, URL url, SpecificData data,
+      Supplier<Map<String, String>> headersSupplier) {
+    return client(interfaceClass, new AsyncHttpTransceiver(url), data, headersSupplier);
+  }
+
+  public static <T> T client(Class<T> interfaceClass, URL url,
+      Supplier<Map<String, String>> headersSupplier) {
+    return client(interfaceClass, new AsyncHttpTransceiver(url), headersSupplier);
+  }
+
+  public static AvroPlugin getInstance() {
+    return Play.application().plugin(AvroPlugin.class);
+  }
+
+  private ExecutionContext ipcExecutionContext;
+
+  @Value("${avro-plugin.ipc-execution-context:play.akka.actor.default-dispatcher}")
+  private String ipcExecutionContextId;
+
+  private Map<Class<?>, Object> protocolImplementations;
+
+  public AvroPlugin(Application application) {
+    super(application);
+  }
+
+  public ExecutionContext getIpcExecutionContext() {
+    return ipcExecutionContext;
   }
 
   public Map<Class<?>, Object> getProtocolImplementations() {

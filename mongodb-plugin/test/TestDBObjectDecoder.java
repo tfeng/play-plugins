@@ -255,7 +255,7 @@ public class TestDBObjectDecoder {
     DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
     String mongoString = JSON.serialize(mongoObject);
 
-    String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31T08:09:34.033Z\", \"date2\": 1409440174033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
+    String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31T08:09:34.033Z\", \"date2\": 1409472574033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
     SpecificDatumReader<Types1> reader = new SpecificDatumReader<Types1>(schema);
     Types1 types1 = reader.read(null, decoder);
@@ -277,8 +277,8 @@ public class TestDBObjectDecoder {
     assertThat(types2.getBsonTimestamp2()).isEqualTo(1409385948001l);
     assertThat(types1.getDate1().toString()).isEqualTo("2014-08-31T08:09:34.033Z");
     assertThat(types2.getDate1().toString()).isEqualTo("2014-08-31T08:09:34.033Z");
-    assertThat(types1.getDate2()).isEqualTo(1409440174033l);
-    assertThat(types2.getDate2()).isEqualTo(1409440174033l);
+    assertThat(types1.getDate2()).isEqualTo(1409472574033l);
+    assertThat(types2.getDate2()).isEqualTo(1409472574033l);
     assertThat(types1.getMongoString().toString()).isEqualTo(mongoString);
     assertThat(types2.getMongoString().toString()).isEqualTo(mongoString);
 
@@ -309,7 +309,7 @@ public class TestDBObjectDecoder {
     DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
     String mongoString = JSON.serialize(mongoObject);
 
-    String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31T08:09:34.033Z\", \"date2\": 1409440174033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
+    String avroJson = "{\"objectId\": \"5401bf578de2a77380c5489a\", \"bsonTimestamp1\": \"(1409385948, 1)\", \"bsonTimestamp2\": 1409385948001, \"date1\": \"2014-08-31T08:09:34.033Z\", \"date2\": 1409472574033, \"mongoString\": \"" + mongoString.replace("\"", "\\\"") + "\"}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
     SpecificDatumReader<Types2> reader = new SpecificDatumReader<Types2>(schema);
     Types2 types1 = reader.read(null, decoder);
@@ -331,8 +331,8 @@ public class TestDBObjectDecoder {
     assertThat(types2.getBsonTimestamp2()).isEqualTo(1409385948001l);
     assertThat(types1.getDate1().toString()).isEqualTo("2014-08-31T08:09:34.033Z");
     assertThat(types2.getDate1().toString()).isEqualTo("2014-08-31T08:09:34.033Z");
-    assertThat(types1.getDate2()).isEqualTo(1409440174033l);
-    assertThat(types2.getDate2()).isEqualTo(1409440174033l);
+    assertThat(types1.getDate2()).isEqualTo(1409472574033l);
+    assertThat(types2.getDate2()).isEqualTo(1409472574033l);
     assertThat(types1.getMongoString().toString()).isEqualTo(mongoString);
     assertThat(types2.getMongoString().toString()).isEqualTo(mongoString);
 

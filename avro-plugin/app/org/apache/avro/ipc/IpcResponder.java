@@ -20,7 +20,12 @@
 
 package org.apache.avro.ipc;
 
+import java.io.IOException;
+
+import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Protocol;
+import org.apache.avro.Schema;
+import org.apache.avro.io.Encoder;
 import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.avro.specific.SpecificData;
 
@@ -29,19 +34,35 @@ import org.apache.avro.specific.SpecificData;
  */
 public class IpcResponder extends SpecificResponder {
 
+  private Exception unexpectedError;
+
   public IpcResponder(Class<?> iface, Object impl) {
     super(iface, impl);
-  }
-
-  public IpcResponder(Protocol protocol, Object impl) {
-    super(protocol, impl);
   }
 
   public IpcResponder(Class<?> iface, Object impl, SpecificData data) {
     super(iface, impl, data);
   }
 
+  public IpcResponder(Protocol protocol, Object impl) {
+    super(protocol, impl);
+  }
+
   public IpcResponder(Protocol protocol, Object impl, SpecificData data) {
     super(protocol, impl, data);
+  }
+
+  public Exception getUnexpectedError() {
+    return unexpectedError;
+  }
+
+  @Override
+  public void writeError(Schema schema, Object error, Encoder out) throws IOException {
+    try {
+      super.writeError(schema, error, out);
+    } catch (AvroRuntimeException e) {
+      unexpectedError = (Exception) error;
+      throw e;
+    }
   }
 }

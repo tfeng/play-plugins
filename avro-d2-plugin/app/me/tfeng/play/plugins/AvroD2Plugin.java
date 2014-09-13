@@ -21,20 +21,18 @@
 package me.tfeng.play.plugins;
 
 import java.lang.reflect.Proxy;
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Supplier;
 
 import me.tfeng.play.avro.AvroHelper;
 import me.tfeng.play.avro.d2.AvroD2Client;
-import me.tfeng.play.avro.d2.AvroD2Helper;
 import me.tfeng.play.avro.d2.AvroD2Server;
 
 import org.apache.avro.Protocol;
@@ -62,20 +60,21 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
   }
 
   public static <T> T client(Class<T> interfaceClass, SpecificData data) {
-    URI uri = AvroD2Helper.getUri(AvroHelper.getProtocol(interfaceClass));
-    AvroD2Plugin plugin = AvroD2Plugin.getInstance();
+    return client(interfaceClass, data, null);
+  }
 
-    AvroD2Client client;
-    synchronized (plugin.clients) {
-      client = plugin.clients.get(uri);
-      if (client == null) {
-        client = new AvroD2Client(interfaceClass, data);
-        plugin.clients.put(uri, client);
-      }
-    }
-
+  public static <T> T client(Class<T> interfaceClass, SpecificData data,
+      Supplier<Map<String, String>> headersSupplier) {
+    AvroD2Client client = new AvroD2Client(interfaceClass, data);
+    client.setHeadersSupplier(headersSupplier);
     return interfaceClass.cast(Proxy.newProxyInstance(interfaceClass.getClassLoader(),
         new Class<?>[] { interfaceClass }, client));
+  }
+
+  public static <T> T client(Class<T> interfaceClass,
+      Supplier<Map<String, String>> headersSupplier) {
+    return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()),
+        headersSupplier);
   }
 
   public static AvroD2Plugin getInstance() {
@@ -84,8 +83,6 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
 
   @Value("${avro-d2-plugin.client-refresh-retry-delay-ms:1000}")
   private long clientRefreshRetryDelay;
-
-  private final Map<URI, AvroD2Client> clients = new HashMap<>();
 
   private Map<Class<?>, String> protocolPaths;
 
@@ -167,10 +164,6 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
   @Override
   public void process(WatchedEvent event) {
     LOG.info(event.toString());
-  }
-
-  public void refreshClients() {
-    clients.clear();
   }
 
   public void stopServers() {

@@ -27,7 +27,9 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import me.tfeng.play.avro.AvroHelper;
 import me.tfeng.play.plugins.AvroD2Plugin;
@@ -50,10 +52,12 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   private static final ALogger LOG = Logger.of(AvroD2Client.class);
 
   private final SpecificData data;
+  private Supplier<Map<String, String>> headersSupplier;
   private final Class<?> interfaceClass;
   private int lastIndex = -1;
   private final Protocol protocol;
   private IpcRequestor requestor;
+
   private final List<URL> serverUrls = new ArrayList<>();
 
   public AvroD2Client(Class<?> interfaceClass) {
@@ -85,6 +89,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
       refresh();
       try {
         requestor = new IpcRequestor(interfaceClass, new AvroD2Transceiver(this), data);
+        requestor.setHeadersSupplier(headersSupplier);
       } catch (IOException e) {
         throw new RuntimeException("Unable to initialize Avro requestor for " + protocol.getName(),
             e);
@@ -126,6 +131,13 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     if (serverUrls.isEmpty()) {
       LOG.warn("Unable to get any server URL for protocol " + protocol.getName() + "; retry later");
       scheduleRefresh();
+    }
+  }
+
+  public void setHeadersSupplier(Supplier<Map<String, String>> headersSupplier) {
+    this.headersSupplier = headersSupplier;
+    if (requestor != null) {
+      requestor.setHeadersSupplier(headersSupplier);
     }
   }
 

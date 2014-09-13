@@ -44,12 +44,11 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.ipc.HandshakeResponse;
+import org.apache.avro.ipc.IpcResponder;
 import org.apache.avro.ipc.RPCContext;
 import org.apache.avro.ipc.Requestor;
-import org.apache.avro.ipc.Responder;
 import org.apache.avro.ipc.Transceiver;
 import org.apache.avro.ipc.generic.GenericRequestor;
-import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.util.ByteBufferInputStream;
 import org.apache.http.entity.ContentType;
@@ -148,11 +147,16 @@ public class JsonIpcController extends Controller {
     GenericRequestor requestor = new GenericRequestor(avroProtocol, EMPTY_TRANSCEIVER);
     byte[] bytes = request().body().asRaw().asBytes();
     Object request = getRequest(requestor, avroProtocol, message, bytes);
-    List<ByteBuffer> buffers = convertToBuffers(request);
-    Responder responder = new SpecificResponder(protocolClass, implementation);
 
     try {
+      List<ByteBuffer> buffers = convertToBuffers(request);
+      IpcResponder responder = new IpcResponder(protocolClass, implementation);
       List<ByteBuffer> responseBuffers = responder.respond(buffers);
+      Exception unexpectedError = responder.getUnexpectedError();
+      if (unexpectedError != null) {
+        throw unexpectedError;
+      }
+
       Object response = getResponse(requestor, request, responseBuffers);
       return Results.ok(
           AvroHelper.toJson(avroProtocol.getMessages().get(message).getResponse(), response));

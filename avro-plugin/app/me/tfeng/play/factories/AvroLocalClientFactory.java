@@ -28,6 +28,8 @@ import java.lang.reflect.Proxy;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.Required;
 
+import play.Logger;
+import play.Logger.ALogger;
 import play.libs.Akka;
 import play.libs.F.Promise;
 import scala.concurrent.ExecutionContext;
@@ -37,8 +39,10 @@ import scala.concurrent.ExecutionContext;
  */
 public class AvroLocalClientFactory implements FactoryBean<Object>, InvocationHandler {
 
+  private static final ALogger LOG = Logger.of(AvroLocalClientFactory.class);
+
   private Object bean;
-  private String executionContextId;
+  private ExecutionContext executionContext;
   private Class<?> interfaceClass;
 
   @Override
@@ -55,10 +59,15 @@ public class AvroLocalClientFactory implements FactoryBean<Object>, InvocationHa
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     Method beanMethod = bean.getClass().getMethod(method.getName(), method.getParameterTypes());
-    if (executionContextId == null) {
-      return Promise.promise(() -> beanMethod.invoke(bean, args));
+    if (executionContext == null) {
+      return Promise.promise(() -> {
+        try {
+          return beanMethod.invoke(bean, args);
+        } catch (InvocationTargetException e) {
+          throw e.getCause();
+        }
+      });
     } else {
-      ExecutionContext executionContext = Akka.system().dispatchers().lookup(executionContextId);
       return Promise.promise(() -> {
         try {
           return beanMethod.invoke(bean, args);
@@ -80,7 +89,11 @@ public class AvroLocalClientFactory implements FactoryBean<Object>, InvocationHa
   }
 
   public void setExecutionContextId(String executionContextId) {
-    this.executionContextId = executionContextId;
+    try {
+      executionContext = Akka.system().dispatchers().lookup(executionContextId);
+    } catch (Exception e) {
+      LOG.warn("Unable to get Akka execution context " + executionContextId + "; using default");
+    }
   }
 
   @Required

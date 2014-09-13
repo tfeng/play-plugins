@@ -25,6 +25,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -142,6 +143,10 @@ public class MongoDbTypeConverter {
   public static final DateFormat DATE_FORMAT = new SimpleDateFormat(JSONCallback._msDateFormat);
 
   public static final Pattern TIMESTAMP_PATTERN = Pattern.compile("\\(([0-9]+),\\s*([0-9]+)\\)");
+
+  static {
+    DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+  }
 
   public static <S, T> T convertFromMongoDbType(Class<T> dataClass, S object) {
     if (object == null) {

@@ -44,7 +44,7 @@ public class AvroD2Server implements Watcher {
 
   private static final ALogger LOG = Logger.of(AvroD2Server.class);
 
-  protected String nodePath;
+  protected volatile String nodePath;
   protected final Protocol protocol;
   protected final URL url;
   protected final ZooKeeper zk;
@@ -57,10 +57,11 @@ public class AvroD2Server implements Watcher {
   }
 
   public void close() throws InterruptedException, KeeperException {
-    if (nodePath != null) {
+    String path = nodePath;
+    if (path != null) {
       LOG.info("Closing server for " + protocol.getName() + " at " + url);
       try {
-        zk.delete(nodePath, -1);
+        zk.delete(path, -1);
       } catch (NoNodeException e) {
         // Ignore.
       }

@@ -26,23 +26,19 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import me.tfeng.play.plugins.AvroPlugin;
 import me.tfeng.play.plugins.HttpPlugin;
 
 import org.apache.avro.AvroRemoteException;
 
-import play.Logger;
-import play.Logger.ALogger;
 import play.libs.F.Promise;
 import play.libs.ws.WSResponse;
-import play.mvc.Controller;
-import play.mvc.Http.Request;
 
 import com.ning.http.client.AsyncHttpClient;
 
@@ -50,10 +46,6 @@ import com.ning.http.client.AsyncHttpClient;
  * @author Thomas Feng (huining.feng@gmail.com)
  */
 public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransceiver {
-
-  public static final String[] DEFAULT_PRESERVED_HEADERS = { "Authorization" };
-
-  private static final ALogger LOG = Logger.of(AsyncHttpTransceiver.class);
 
   public static List<ByteBuffer> readBuffers(InputStream in) throws IOException {
     return HttpTransceiver.readBuffers(in);
@@ -64,8 +56,6 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
   }
 
   private Map<String, String> extraHeaders;
-
-  private String[] preservedHeaders = DEFAULT_PRESERVED_HEADERS;
   private Promise<WSResponse> promise;
   private final Semaphore semaphore = new Semaphore(1);
 
@@ -93,25 +83,15 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
     });
   }
 
+  private Supplier<Map<String, String>> headersSupplier;
+
+  public void setHeadersSupplier(Supplier<Map<String, String>> headersSupplier) {
+    this.headersSupplier = headersSupplier;
+  }
+
   @Override
   public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request) throws IOException {
-    Map<String, String> headers = null;
-    if (preservedHeaders != null && preservedHeaders.length > 0) {
-      Request currentRequest = null;
-      try {
-        currentRequest = Controller.request();
-      } catch (RuntimeException e) {
-        LOG.info("Unable to get current request; do not pass headers to downstream calls");
-      }
-      if (currentRequest != null) {
-        headers = new HashMap<>(preservedHeaders.length);
-        for (String preservedHeader : preservedHeaders) {
-          headers.put(preservedHeader, currentRequest.getHeader(preservedHeader));
-        }
-      }
-    }
-    Map<String, String> extraHeaders = headers;
-
+    Map<String, String> extraHeaders = headersSupplier.get();
     return Promise.promise(() -> {
       semaphore.acquire();
       this.extraHeaders = extraHeaders;
@@ -134,10 +114,6 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
   @Override
   public synchronized List<ByteBuffer> readBuffers() throws IOException {
     return asyncReadBuffers().get(timeout);
-  }
-
-  public void setPreservedHeaders(String[] preservedHeaders) {
-    this.preservedHeaders = preservedHeaders;
   }
 
   @Override

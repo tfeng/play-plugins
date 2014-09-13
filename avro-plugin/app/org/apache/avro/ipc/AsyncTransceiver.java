@@ -23,6 +23,8 @@ package org.apache.avro.ipc;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 
 import play.libs.F.Promise;
 
@@ -32,6 +34,8 @@ import play.libs.F.Promise;
 public interface AsyncTransceiver {
 
   public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request) throws IOException;
+
+  public void setHeadersSupplier(Supplier<Map<String, String>> headersSupplier);
 
   public List<ByteBuffer> transceive(List<ByteBuffer> request) throws IOException;
 }

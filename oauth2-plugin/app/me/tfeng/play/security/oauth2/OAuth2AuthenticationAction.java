@@ -76,9 +76,16 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
       AuthenticationCredentialsNotFoundEventListener
           authenticationCredentialsNotFoundEventListener =
               new AuthenticationCredentialsNotFoundEventListener(context.id());
+      multicaster.addApplicationListener(authenticationCredentialsNotFoundEventListener);
       try {
-        multicaster.addApplicationListener(authenticationCredentialsNotFoundEventListener);
-        return delegate.call(context);
+        return delegate.call(context).recover(t -> {
+          if (OAuth2Plugin.isAuthenticationError(t)) {
+            LOG.warn("Authentication failed", t);
+            return Results.unauthorized();
+          } else {
+            throw t;
+          }
+        });
       } catch (Exception e) {
         AuthenticationCredentialsNotFoundException authenticationCredentialsNotFoundException =
             authenticationCredentialsNotFoundEventListener.getException();
@@ -105,7 +112,14 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
             new AuthorizationFailureEventListener(context.id());
         multicaster.addApplicationListener(authorizationFailureEventListener);
         try {
-          return delegate.call(context);
+          return delegate.call(context).recover(t -> {
+            if (OAuth2Plugin.isAuthenticationError(t)) {
+              LOG.warn("Authentication failed", t);
+              return Results.unauthorized();
+            } else {
+              throw t;
+            }
+          });
         } catch (Exception e) {
           AccessDeniedException accessDeniedException =
               authorizationFailureEventListener.getException();
