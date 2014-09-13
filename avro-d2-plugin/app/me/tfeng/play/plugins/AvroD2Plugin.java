@@ -29,6 +29,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import me.tfeng.play.avro.AvroHelper;
 import me.tfeng.play.avro.d2.AvroD2Client;
@@ -80,15 +82,23 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     return Play.application().plugin(AvroD2Plugin.class);
   }
 
+  @Value("${avro-d2-plugin.client-refresh-retry-delay-ms:1000}")
+  private long clientRefreshRetryDelay;
+
   private final Map<URI, AvroD2Client> clients = new HashMap<>();
 
   private Map<Class<?>, String> protocolPaths;
+
+  private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
   @Value("${avro-d2-plugin.server-host}")
   private String serverHost;
 
   @Value("${avro-d2-plugin.server-port}")
   private int serverPort;
+
+  @Value("${avro-d2-plugin.server-register-retry-delay-ms:1000}")
+  private long serverRegisterRetryDelay;
 
   private List<AvroD2Server> servers;
 
@@ -102,6 +112,18 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
 
   public AvroD2Plugin(Application application) {
     super(application);
+  }
+
+  public long getClientRefreshRetryDelay() {
+    return clientRefreshRetryDelay;
+  }
+
+  public ScheduledExecutorService getScheduler() {
+    return scheduler;
+  }
+
+  public long getServerRegisterRetryDelay() {
+    return serverRegisterRetryDelay;
   }
 
   public ZooKeeper getZooKeeper() {
@@ -152,7 +174,14 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
   }
 
   public void stopServers() {
-    servers.stream().forEach(server -> server.close());
+    servers.stream().forEach(server -> {
+      try {
+        server.close();
+      } catch (Exception e) {
+        LOG.error("Unable to close server for " + server.getProtocol().getName() + " at "
+            + server.getUrl() + "; ignoring");
+      }
+    });
     servers.clear();
   }
 }

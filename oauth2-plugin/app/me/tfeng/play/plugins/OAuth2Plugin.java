@@ -24,6 +24,7 @@ import java.lang.reflect.InvocationTargetException;
 
 import me.tfeng.play.security.oauth2.AuthenticationError;
 import me.tfeng.play.security.oauth2.AuthenticationManagerClient;
+import me.tfeng.play.spring.WithSpringConfig;
 
 import org.apache.avro.ipc.AsyncHttpException;
 import org.apache.http.HttpStatus;
@@ -40,6 +41,7 @@ import play.Play;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
+@WithSpringConfig("classpath*:spring/oauth2-plugin/oauth2-plugin.xml")
 public class OAuth2Plugin extends AbstractPlugin {
 
   public static OAuth2Plugin getInstance() {

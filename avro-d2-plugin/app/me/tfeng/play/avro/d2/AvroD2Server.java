@@ -21,8 +21,17 @@
 package me.tfeng.play.avro.d2;
 
 import java.net.URL;
+import java.util.concurrent.TimeUnit;
+
+import me.tfeng.play.plugins.AvroD2Plugin;
 
 import org.apache.avro.Protocol;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NoNodeException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
 
 import play.Logger;
@@ -31,42 +40,63 @@ import play.Logger.ALogger;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroD2Server {
+public class AvroD2Server implements Watcher {
 
   private static final ALogger LOG = Logger.of(AvroD2Server.class);
 
   protected String nodePath;
   protected final Protocol protocol;
-  protected final URL serverUrl;
+  protected final URL url;
   protected final ZooKeeper zk;
 
-  public AvroD2Server(ZooKeeper zk, Protocol protocol, URL serverUrl) {
+  public AvroD2Server(ZooKeeper zk, Protocol protocol, URL url) {
     this.zk = zk;
     this.protocol = protocol;
-    this.serverUrl = serverUrl;
+    this.url = url;
     register();
   }
 
-  public void close() {
-    try {
-      if (nodePath != null) {
-        LOG.info("Closing server " + serverUrl);
+  public void close() throws InterruptedException, KeeperException {
+    if (nodePath != null) {
+      LOG.info("Closing server for " + protocol.getName() + " at " + url);
+      try {
         zk.delete(nodePath, -1);
+      } catch (NoNodeException e) {
+        // Ignore.
       }
-    } catch (Exception e) {
-      throw new RuntimeException("Unable to close server at " + AvroD2Helper.getUri(protocol), e);
+      nodePath = null;
+    }
+  }
+
+  public Protocol getProtocol() {
+    return protocol;
+  }
+
+  public URL getUrl() {
+    return url;
+  }
+
+  @Override
+  public void process(WatchedEvent event) {
+    if (event.getType() == EventType.NodeDeleted && event.getPath().equals(nodePath)
+        || event.getType() == EventType.None && event.getState() == KeeperState.SyncConnected) {
+      // If the node is unexpectedly deleted or if ZooKeeper connection is restored, register the
+      // server again.
+      register();
     }
   }
 
   public void register() {
-    close();
-
-    LOG.info("Registering server for " + AvroD2Helper.getUri(protocol) + " at " + serverUrl);
     try {
-      nodePath = AvroD2Helper.createProtocolNode(zk, protocol, serverUrl);
+      close();
+
+      LOG.info("Registering server for " + protocol.getName() + " at " + url);
+      nodePath = AvroD2Helper.createProtocolNode(zk, protocol, url);
+      zk.getData(nodePath, this, null);
     } catch (Exception e) {
-      throw new RuntimeException("Unable to register server at " + AvroD2Helper.getUri(protocol),
-          e);
+      LOG.warn("Unable to register server for " + protocol.getName() + "; retry later", e);
+      AvroD2Plugin.getInstance().getScheduler().schedule(() -> register(),
+          AvroD2Plugin.getInstance().getServerRegisterRetryDelay(), TimeUnit.MILLISECONDS);
     }
   }
 }

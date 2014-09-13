@@ -21,6 +21,7 @@
 package me.tfeng.play.factories;
 
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
@@ -58,7 +59,13 @@ public class AvroLocalClientFactory implements FactoryBean<Object>, InvocationHa
       return Promise.promise(() -> beanMethod.invoke(bean, args));
     } else {
       ExecutionContext executionContext = Akka.system().dispatchers().lookup(executionContextId);
-      return Promise.promise(() -> beanMethod.invoke(bean, args), executionContext);
+      return Promise.promise(() -> {
+        try {
+          return beanMethod.invoke(bean, args);
+        } catch (InvocationTargetException e) {
+          throw e.getCause();
+        }
+      }, executionContext);
     }
   }
 

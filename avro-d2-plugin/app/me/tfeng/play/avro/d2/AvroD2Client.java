@@ -27,6 +27,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import me.tfeng.play.avro.AvroHelper;
 import me.tfeng.play.plugins.AvroD2Plugin;
@@ -85,8 +86,8 @@ public class AvroD2Client implements Watcher, InvocationHandler {
       try {
         requestor = new IpcRequestor(interfaceClass, new AvroD2Transceiver(this), data);
       } catch (IOException e) {
-        throw new RuntimeException("Unable to initialize Avro requestor for "
-            + AvroD2Helper.getUri(protocol), e);
+        throw new RuntimeException("Unable to initialize Avro requestor for " + protocol.getName(),
+            e);
       }
     }
     return requestor.invoke(proxy, method, args);
@@ -94,11 +95,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   @Override
   public void process(WatchedEvent event) {
-    try {
-      refresh();
-    } catch (Exception e) {
-      LOG.error("Unable to get server URL from path " + AvroD2Helper.getZkPath(protocol));
-    }
+    refresh();
   }
 
   public void refresh() {
@@ -109,7 +106,9 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     try {
       children = zk.getChildren(path, this);
     } catch (Exception e) {
-      throw new RuntimeException("Unable to list servers for " + AvroD2Helper.getUri(protocol));
+      LOG.warn("Unable to list servers for " + protocol.getName() + "; retry later", e);
+      scheduleRefresh();
+      return;
     }
 
     serverUrls.clear();
@@ -120,8 +119,18 @@ public class AvroD2Client implements Watcher, InvocationHandler {
         String serverUrl = new String(data, Charset.forName("utf8"));
         serverUrls.add(new URL(serverUrl));
       } catch (Exception e) {
-        LOG.warn("Unable to get server URL from node " + childPath);
+        LOG.warn("Unable to get server URL from node " + childPath, e);
       }
     }
+
+    if (serverUrls.isEmpty()) {
+      LOG.warn("Unable to get any server URL for protocol " + protocol.getName() + "; retry later");
+      scheduleRefresh();
+    }
+  }
+
+  private void scheduleRefresh() {
+    AvroD2Plugin.getInstance().getScheduler().schedule(() -> refresh(),
+        AvroD2Plugin.getInstance().getClientRefreshRetryDelay(), TimeUnit.MILLISECONDS);
   }
 }
