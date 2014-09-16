@@ -25,24 +25,19 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
+import me.tfeng.play.plugins.AvroPlugin;
+
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.Required;
 
-import play.Logger;
-import play.Logger.ALogger;
-import play.libs.Akka;
 import play.libs.F.Promise;
-import scala.concurrent.ExecutionContext;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
 public class AvroLocalClientFactory implements FactoryBean<Object>, InvocationHandler {
 
-  private static final ALogger LOG = Logger.of(AvroLocalClientFactory.class);
-
   private Object bean;
-  private ExecutionContext executionContext;
   private Class<?> interfaceClass;
 
   @Override
@@ -59,23 +54,13 @@ public class AvroLocalClientFactory implements FactoryBean<Object>, InvocationHa
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     Method beanMethod = bean.getClass().getMethod(method.getName(), method.getParameterTypes());
-    if (executionContext == null) {
-      return Promise.promise(() -> {
-        try {
-          return beanMethod.invoke(bean, args);
-        } catch (InvocationTargetException e) {
-          throw e.getCause();
-        }
-      });
-    } else {
-      return Promise.promise(() -> {
-        try {
-          return beanMethod.invoke(bean, args);
-        } catch (InvocationTargetException e) {
-          throw e.getCause();
-        }
-      }, executionContext);
-    }
+    return Promise.promise(() -> {
+      try {
+        return beanMethod.invoke(bean, args);
+      } catch (InvocationTargetException e) {
+        throw e.getCause();
+      }
+    }, AvroPlugin.getInstance().getExecutionContext());
   }
 
   @Override
@@ -86,14 +71,6 @@ public class AvroLocalClientFactory implements FactoryBean<Object>, InvocationHa
   @Required
   public void setBean(Object bean) {
     this.bean = bean;
-  }
-
-  public void setExecutionContextId(String executionContextId) {
-    try {
-      executionContext = Akka.system().dispatchers().lookup(executionContextId);
-    } catch (Exception e) {
-      LOG.warn("Unable to get Akka execution context " + executionContextId + "; using default");
-    }
   }
 
   @Required

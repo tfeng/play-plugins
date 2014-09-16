@@ -24,7 +24,6 @@ import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -41,8 +40,6 @@ import org.apache.zookeeper.ZooKeeper;
 public class AvroD2Helper {
 
   public static final String SCHEME = "avsd";
-
-  public static final Charset UTF8 = Charset.forName("utf8");
 
   public static String createProtocolNode(ZooKeeper zk, Protocol protocol, URL serverUrl)
       throws KeeperException, InterruptedException {

@@ -20,21 +20,34 @@
 
 package org.apache.avro.ipc;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
+import java.net.URL;
 
 import me.tfeng.play.http.PostRequestPreparer;
-import play.libs.F.Promise;
+import play.Logger;
+import play.Logger.ALogger;
+import play.mvc.Controller;
+import play.mvc.Http.Request;
+
+import com.ning.http.client.AsyncHttpClient;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public interface AsyncTransceiver {
+public class AuthTokenPreservingPostRequestPreparer implements PostRequestPreparer {
 
-  public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request,
-      PostRequestPreparer postRequestPreparer) throws IOException;
+  private static final ALogger LOG = Logger.of(AuthTokenPreservingPostRequestPreparer.class);
 
-  public List<ByteBuffer> transceive(List<ByteBuffer> request,
-      PostRequestPreparer postRequestPreparer) throws IOException;
+  @Override
+  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
+    Request currentRequest = null;
+    try {
+      currentRequest = Controller.request();
+    } catch (RuntimeException e) {
+      LOG.info("Unable to get current request; do not pass headers to downstream calls");
+    }
+
+    if (currentRequest != null) {
+      builder.setHeader("Authorization", currentRequest.getHeader("Authorization"));
+    }
+  }
 }

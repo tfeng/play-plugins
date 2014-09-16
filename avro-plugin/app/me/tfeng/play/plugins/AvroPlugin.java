@@ -25,7 +25,8 @@ import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Map;
-import java.util.function.Supplier;
+
+import me.tfeng.play.http.PostRequestPreparer;
 
 import org.apache.avro.ipc.AsyncHttpTransceiver;
 import org.apache.avro.ipc.AsyncTransceiver;
@@ -35,6 +36,8 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Value;
 
 import play.Application;
+import play.Logger;
+import play.Logger.ALogger;
 import play.Play;
 import play.libs.Akka;
 import scala.concurrent.ExecutionContext;
@@ -43,6 +46,8 @@ import scala.concurrent.ExecutionContext;
  * @author Thomas Feng (huining.feng@gmail.com)
  */
 public class AvroPlugin extends AbstractPlugin {
+
+  private static final ALogger LOG = Logger.of(AvroPlugin.class);
 
   public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver) {
     return client(interfaceClass, transceiver, new SpecificData(interfaceClass.getClassLoader()));
@@ -55,10 +60,12 @@ public class AvroPlugin extends AbstractPlugin {
 
   @SuppressWarnings("unchecked")
   public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver,
-      SpecificData data, Supplier<Map<String, String>> headersSupplier) {
+      SpecificData data, PostRequestPreparer postRequestPreparer) {
     try {
       IpcRequestor requestor = new IpcRequestor(interfaceClass, transceiver, data);
-      requestor.setHeadersSupplier(headersSupplier);
+      if (postRequestPreparer != null) {
+        requestor.setPostRequestPreparer(postRequestPreparer);
+      }
       return (T) Proxy.newProxyInstance(data.getClassLoader(), new Class[] { interfaceClass },
           requestor);
     } catch (IOException e) {
@@ -67,9 +74,9 @@ public class AvroPlugin extends AbstractPlugin {
   }
 
   public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver,
-      Supplier<Map<String, String>> headersSupplier) {
+      PostRequestPreparer postRequestPreparer) {
     return client(interfaceClass, transceiver, new SpecificData(interfaceClass.getClassLoader()),
-        headersSupplier);
+        postRequestPreparer);
   }
 
   public static <T> T client(Class<T> interfaceClass, URL url) {
@@ -81,23 +88,23 @@ public class AvroPlugin extends AbstractPlugin {
   }
 
   public static <T> T client(Class<T> interfaceClass, URL url, SpecificData data,
-      Supplier<Map<String, String>> headersSupplier) {
-    return client(interfaceClass, new AsyncHttpTransceiver(url), data, headersSupplier);
+      PostRequestPreparer postRequestPreparer) {
+    return client(interfaceClass, new AsyncHttpTransceiver(url), data, postRequestPreparer);
   }
 
   public static <T> T client(Class<T> interfaceClass, URL url,
-      Supplier<Map<String, String>> headersSupplier) {
-    return client(interfaceClass, new AsyncHttpTransceiver(url), headersSupplier);
+      PostRequestPreparer postRequestPreparer) {
+    return client(interfaceClass, new AsyncHttpTransceiver(url), postRequestPreparer);
   }
 
   public static AvroPlugin getInstance() {
     return Play.application().plugin(AvroPlugin.class);
   }
 
-  private ExecutionContext ipcExecutionContext;
+  private ExecutionContext executionContext;
 
-  @Value("${avro-plugin.ipc-execution-context:play.akka.actor.default-dispatcher}")
-  private String ipcExecutionContextId;
+  @Value("${avro-plugin.execution-context:play.akka.actor.default-dispatcher}")
+  private String executionContextId;
 
   private Map<Class<?>, Object> protocolImplementations;
 
@@ -105,8 +112,8 @@ public class AvroPlugin extends AbstractPlugin {
     super(application);
   }
 
-  public ExecutionContext getIpcExecutionContext() {
-    return ipcExecutionContext;
+  public ExecutionContext getExecutionContext() {
+    return executionContext;
   }
 
   public Map<Class<?>, Object> getProtocolImplementations() {
@@ -118,7 +125,13 @@ public class AvroPlugin extends AbstractPlugin {
   public void onStart() {
     super.onStart();
 
-    ipcExecutionContext = Akka.system().dispatchers().lookup(ipcExecutionContextId);
+    try {
+      executionContext = Akka.system().dispatchers().lookup(executionContextId);
+    } catch (Exception e) {
+      LOG.warn("Unable to obtain execution context " + executionContextId + "; using default", e);
+      executionContext = Akka.system().dispatchers().defaultGlobalDispatcher();
+    }
+
     try {
       protocolImplementations =
           getApplicationContext().getBean("avro-plugin.protocol-implementations", Map.class);

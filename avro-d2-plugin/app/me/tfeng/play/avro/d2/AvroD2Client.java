@@ -20,18 +20,16 @@
 
 package me.tfeng.play.avro.d2;
 
-import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import me.tfeng.play.avro.AvroHelper;
+import me.tfeng.play.http.PostRequestPreparer;
 import me.tfeng.play.plugins.AvroD2Plugin;
 
 import org.apache.avro.Protocol;
@@ -52,12 +50,11 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   private static final ALogger LOG = Logger.of(AvroD2Client.class);
 
   private final SpecificData data;
-  private Supplier<Map<String, String>> headersSupplier;
   private final Class<?> interfaceClass;
-  private int lastIndex = -1;
+  private volatile int lastIndex = -1;
+  private volatile PostRequestPreparer postRequestPreparer;
   private final Protocol protocol;
-  private IpcRequestor requestor;
-
+  private volatile IpcRequestor requestor;
   private final List<URL> serverUrls = new ArrayList<>();
 
   public AvroD2Client(Class<?> interfaceClass) {
@@ -71,11 +68,13 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   }
 
   public URL getNextServerUrl() {
-    if (serverUrls.isEmpty()) {
-      throw new RuntimeException("No server is found for " + AvroD2Helper.getUri(protocol));
-    } else {
-      lastIndex = (lastIndex + 1) % serverUrls.size();
-      return serverUrls.get(lastIndex);
+    synchronized(serverUrls) {
+      if (serverUrls.isEmpty()) {
+        throw new RuntimeException("No server is found for " + protocol.getName());
+      } else {
+        lastIndex = (lastIndex + 1) % serverUrls.size();
+        return serverUrls.get(lastIndex);
+      }
     }
   }
 
@@ -87,12 +86,9 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     if (requestor == null) {
       refresh();
-      try {
-        requestor = new IpcRequestor(interfaceClass, new AvroD2Transceiver(this), data);
-        requestor.setHeadersSupplier(headersSupplier);
-      } catch (IOException e) {
-        throw new RuntimeException("Unable to initialize Avro requestor for " + protocol.getName(),
-            e);
+      requestor = new IpcRequestor(interfaceClass, new AvroD2Transceiver(this), data);
+      if (postRequestPreparer != null) {
+        requestor.setPostRequestPreparer(postRequestPreparer);
       }
     }
     return requestor.invoke(proxy, method, args);
@@ -116,28 +112,30 @@ public class AvroD2Client implements Watcher, InvocationHandler {
       return;
     }
 
-    serverUrls.clear();
-    for (String child : children) {
-      String childPath = path + "/" + child;
-      try {
-        byte[] data = zk.getData(childPath, false, null);
-        String serverUrl = new String(data, Charset.forName("utf8"));
-        serverUrls.add(new URL(serverUrl));
-      } catch (Exception e) {
-        LOG.warn("Unable to get server URL from node " + childPath, e);
+    synchronized(serverUrls) {
+      serverUrls.clear();
+      for (String child : children) {
+        String childPath = path + "/" + child;
+        try {
+          byte[] data = zk.getData(childPath, false, null);
+          String serverUrl = new String(data, Charset.forName("utf8"));
+          serverUrls.add(new URL(serverUrl));
+        } catch (Exception e) {
+          LOG.warn("Unable to get server URL from node " + childPath, e);
+        }
       }
-    }
 
-    if (serverUrls.isEmpty()) {
-      LOG.warn("Unable to get any server URL for protocol " + protocol.getName() + "; retry later");
-      scheduleRefresh();
+      if (serverUrls.isEmpty()) {
+        LOG.warn("Unable to get any server URL for protocol " + protocol.getName() + "; retry later");
+        scheduleRefresh();
+      }
     }
   }
 
-  public void setHeadersSupplier(Supplier<Map<String, String>> headersSupplier) {
-    this.headersSupplier = headersSupplier;
+  public void setPostRequestPreparer(PostRequestPreparer postRequestPreparer) {
+    this.postRequestPreparer = postRequestPreparer;
     if (requestor != null) {
-      requestor.setHeadersSupplier(headersSupplier);
+      requestor.setPostRequestPreparer(postRequestPreparer);
     }
   }
 

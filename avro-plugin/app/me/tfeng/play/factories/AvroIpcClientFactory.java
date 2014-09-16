@@ -28,6 +28,8 @@ import org.apache.avro.specific.SpecificData;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.Required;
 
+import com.google.common.base.Objects;
+
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
@@ -39,11 +41,8 @@ public class AvroIpcClientFactory implements FactoryBean<Object> {
 
   @Override
   public Object getObject() throws Exception {
-    SpecificData specificData = this.specificData;
-    if (specificData == null) {
-      specificData = new SpecificData(interfaceClass.getClassLoader());
-    }
-    return AvroPlugin.client(interfaceClass, url, specificData);
+    return AvroPlugin.client(interfaceClass, url,
+        Objects.firstNonNull(specificData, new SpecificData(interfaceClass.getClassLoader())));
   }
 
   @Override

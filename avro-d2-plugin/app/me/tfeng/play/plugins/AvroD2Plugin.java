@@ -20,6 +20,7 @@
 
 package me.tfeng.play.plugins;
 
+import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.util.ArrayList;
@@ -29,11 +30,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Supplier;
 
 import me.tfeng.play.avro.AvroHelper;
 import me.tfeng.play.avro.d2.AvroD2Client;
 import me.tfeng.play.avro.d2.AvroD2Server;
+import me.tfeng.play.http.PostRequestPreparer;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.specific.SpecificData;
@@ -59,22 +60,21 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()));
   }
 
+  public static <T> T client(Class<T> interfaceClass, PostRequestPreparer postRequestPreparer) {
+    return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()),
+        postRequestPreparer);
+  }
+
   public static <T> T client(Class<T> interfaceClass, SpecificData data) {
     return client(interfaceClass, data, null);
   }
 
   public static <T> T client(Class<T> interfaceClass, SpecificData data,
-      Supplier<Map<String, String>> headersSupplier) {
+      PostRequestPreparer postRequestPreparer) {
     AvroD2Client client = new AvroD2Client(interfaceClass, data);
-    client.setHeadersSupplier(headersSupplier);
+    client.setPostRequestPreparer(postRequestPreparer);
     return interfaceClass.cast(Proxy.newProxyInstance(interfaceClass.getClassLoader(),
         new Class<?>[] { interfaceClass }, client));
-  }
-
-  public static <T> T client(Class<T> interfaceClass,
-      Supplier<Map<String, String>> headersSupplier) {
-    return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()),
-        headersSupplier);
   }
 
   public static AvroD2Plugin getInstance() {
@@ -140,6 +140,25 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
 
     try {
       zk = new ZooKeeper(zkConnectString, zkSessionTimeout, this);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to connect to ZooKeeper", e);
+    }
+
+    startServers();
+  }
+
+  @Override
+  public void onStop() {
+    stopServers();
+  }
+
+  @Override
+  public void process(WatchedEvent event) {
+    LOG.info(event.toString());
+  }
+
+  public void startServers() {
+    try {
       servers = new ArrayList<>(protocolPaths.size());
       for (Entry<Class<?>, String> entry : protocolPaths.entrySet()) {
         Protocol protocol = AvroHelper.getProtocol(entry.getKey());
@@ -154,16 +173,6 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     } catch (Exception e) {
       throw new RuntimeException("Unable to initialize server", e);
     }
-  }
-
-  @Override
-  public void onStop() {
-    stopServers();
-  }
-
-  @Override
-  public void process(WatchedEvent event) {
-    LOG.info(event.toString());
   }
 
   public void stopServers() {

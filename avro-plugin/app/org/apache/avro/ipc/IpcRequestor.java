@@ -23,48 +23,19 @@ package org.apache.avro.ipc;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Supplier;
+
+import me.tfeng.play.http.PostRequestPreparer;
 
 import org.apache.avro.ipc.specific.SpecificRequestor;
 import org.apache.avro.specific.SpecificData;
 
-import play.Logger;
-import play.Logger.ALogger;
 import play.libs.F.Promise;
-import play.mvc.Controller;
-import play.mvc.Http.Request;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
 public class IpcRequestor extends SpecificRequestor {
-
-  public static class RequestHeadersSupplier implements Supplier<Map<String, String>> {
-
-    @Override
-    public Map<String, String> get() {
-      Request currentRequest = null;
-      try {
-        currentRequest = Controller.request();
-      } catch (RuntimeException e) {
-        LOG.info("Unable to get current request; do not pass headers to downstream calls");
-      }
-
-      if (currentRequest == null) {
-        return Collections.emptyMap();
-      } else {
-        Map<String, String> headers = new HashMap<>(DEFAULT_PRESERVED_HEADERS.length);
-        for (String preservedHeader : DEFAULT_PRESERVED_HEADERS) {
-          headers.put(preservedHeader, currentRequest.getHeader(preservedHeader));
-        }
-        return headers;
-      }
-    }
-  }
 
   class AsyncRequest extends Requestor.Request {
 
@@ -73,12 +44,11 @@ public class IpcRequestor extends SpecificRequestor {
     }
   }
 
-  public static final RequestHeadersSupplier DEFAULT_HEADERS_SUPPLIER =
-      new RequestHeadersSupplier();
+  public static final AuthTokenPreservingPostRequestPreparer
+      AUTH_TOKEN_PRESERVING_POST_REQUEST_PREPARER =
+          new AuthTokenPreservingPostRequestPreparer();
 
-  public static final String[] DEFAULT_PRESERVED_HEADERS = { "Authorization" };
-
-  private static final ALogger LOG = Logger.of(IpcRequestor.class);
+  private PostRequestPreparer postRequestPreparer = AUTH_TOKEN_PRESERVING_POST_REQUEST_PREPARER;
 
   public IpcRequestor(Class<?> iface, AsyncTransceiver transceiver) throws IOException {
     super(iface, (Transceiver) transceiver);
@@ -98,7 +68,7 @@ public class IpcRequestor extends SpecificRequestor {
     TransceiverCallback<Object> transceiverCallback =
         new TransceiverCallback<Object>(asyncRequest, callFuture);
     if (Promise.class.isAssignableFrom(method.getReturnType())) {
-      return transceiver.asyncTransceive(asyncRequest.getBytes()).map(
+      return transceiver.asyncTransceive(asyncRequest.getBytes(), postRequestPreparer).map(
           response -> {
             transceiverCallback.handleResult(response);
             if (callFuture == null) {
@@ -110,7 +80,8 @@ public class IpcRequestor extends SpecificRequestor {
             }
           });
     } else {
-      List<ByteBuffer> response = transceiver.transceive(asyncRequest.getBytes());
+      List<ByteBuffer> response =
+          transceiver.transceive(asyncRequest.getBytes(), postRequestPreparer);
       transceiverCallback.handleResult(response);
       if (callFuture == null) {
         return null;
@@ -122,8 +93,7 @@ public class IpcRequestor extends SpecificRequestor {
     }
   }
 
-  public void setHeadersSupplier(Supplier<Map<String, String>> headersSupplier) {
-    ((AsyncTransceiver) getTransceiver()).setHeadersSupplier(
-        headersSupplier == null ? DEFAULT_HEADERS_SUPPLIER: headersSupplier);
+  public void setPostRequestPreparer(PostRequestPreparer postRequestPreparer) {
+    this.postRequestPreparer = postRequestPreparer;
   }
 }

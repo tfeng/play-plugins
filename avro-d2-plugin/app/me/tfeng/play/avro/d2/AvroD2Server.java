@@ -56,7 +56,7 @@ public class AvroD2Server implements Watcher {
     register();
   }
 
-  public void close() throws InterruptedException, KeeperException {
+  public synchronized void close() throws InterruptedException, KeeperException {
     String path = nodePath;
     if (path != null) {
       LOG.info("Closing server for " + protocol.getName() + " at " + url);
@@ -87,7 +87,7 @@ public class AvroD2Server implements Watcher {
     }
   }
 
-  public void register() {
+  public synchronized void register() {
     try {
       close();
 

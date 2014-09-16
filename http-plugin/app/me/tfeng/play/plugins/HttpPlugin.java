@@ -22,7 +22,8 @@ package me.tfeng.play.plugins;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.function.Consumer;
+
+import me.tfeng.play.http.PostRequestPreparer;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -107,15 +108,15 @@ public class HttpPlugin extends AbstractPlugin {
   }
 
   public Promise<WSResponse> postRequest(URL url, String contentType, byte[] body,
-      Consumer<BoundRequestBuilder> preparer) throws IOException {
+      PostRequestPreparer postRequestPreparer) throws IOException {
     final scala.concurrent.Promise<WSResponse> scalaPromise =
         scala.concurrent.Promise$.MODULE$.apply();
     BoundRequestBuilder builder = asyncHttpClient.preparePost(url.toString())
         .setHeader("Content-Type", contentType)
         .setContentLength(body.length)
         .setBody(body);
-    if (preparer != null) {
-      preparer.accept(builder);
+    if (postRequestPreparer != null) {
+      postRequestPreparer.prepare(builder, contentType, url);
     }
     builder.execute(new AsyncCompletionHandler<Response>() {
       @Override

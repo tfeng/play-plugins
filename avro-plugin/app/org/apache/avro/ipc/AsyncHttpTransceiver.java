@@ -27,11 +27,9 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Semaphore;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
+import me.tfeng.play.http.PostRequestPreparer;
 import me.tfeng.play.plugins.AvroPlugin;
 import me.tfeng.play.plugins.HttpPlugin;
 
@@ -39,8 +37,6 @@ import org.apache.avro.AvroRemoteException;
 
 import play.libs.F.Promise;
 import play.libs.ws.WSResponse;
-
-import com.ning.http.client.AsyncHttpClient;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -55,10 +51,9 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
     HttpTransceiver.writeBuffers(buffers, out);
   }
 
-  private Map<String, String> extraHeaders;
-  private Promise<WSResponse> promise;
-  private final Semaphore semaphore = new Semaphore(1);
+  private volatile Promise<WSResponse> promise;
 
+  private final Semaphore semaphore = new Semaphore(1);
   private int timeout = HttpPlugin.getInstance().getRequestTimeout();
 
   private final URL url;
@@ -83,28 +78,19 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
     });
   }
 
-  private Supplier<Map<String, String>> headersSupplier;
-
-  public void setHeadersSupplier(Supplier<Map<String, String>> headersSupplier) {
-    this.headersSupplier = headersSupplier;
-  }
-
   @Override
-  public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request) throws IOException {
-    Map<String, String> extraHeaders = headersSupplier.get();
+  public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request,
+      PostRequestPreparer postRequestPreparer) throws IOException {
     return Promise.promise(() -> {
       semaphore.acquire();
-      this.extraHeaders = extraHeaders;
-      writeBuffers(request);
+      writeBuffers(request, postRequestPreparer);
       return this;
-    }, AvroPlugin.getInstance().getIpcExecutionContext()).flatMap(transceiver -> {
+    }, AvroPlugin.getInstance().getExecutionContext()).flatMap(transceiver -> {
       Promise<List<ByteBuffer>> promise = transceiver.asyncReadBuffers();
       promise.onFailure(throwable -> {
-        this.extraHeaders = null;
         transceiver.semaphore.release();
       });
       promise.onRedeem(response -> {
-        this.extraHeaders = null;
         transceiver.semaphore.release();
       });
       return promise;
@@ -122,28 +108,39 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
     this.timeout = timeout;
   }
 
+  public List<ByteBuffer> transceive(List<ByteBuffer> request,
+      PostRequestPreparer postRequestPreparer) throws IOException {
+    try {
+      semaphore.acquire();
+    } catch (InterruptedException e) {
+      throw new IOException("Unable to acquire lock", e);
+    }
+    try {
+      writeBuffers(request, postRequestPreparer);
+      return readBuffers();
+    } finally {
+      semaphore.release();
+    }
+  }
+
   @Override
   public synchronized void writeBuffers(List<ByteBuffer> buffers) throws IOException {
+    writeBuffers(buffers, (PostRequestPreparer) null);
+  }
+
+  public synchronized void writeBuffers(List<ByteBuffer> buffers,
+      PostRequestPreparer postRequestPreparer) throws IOException {
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     writeBuffers(buffers, outputStream);
-    promise = postRequest(url, outputStream.toByteArray());
+    promise = postRequest(url, outputStream.toByteArray(), postRequestPreparer);
   }
 
   protected String getContentType() {
     return CONTENT_TYPE;
   }
 
-  protected Consumer<AsyncHttpClient.BoundRequestBuilder> getRequestPreparer(URL url, byte[] body,
-      Map<String, String> extraHeaders) {
-    return builder -> {
-      if (extraHeaders != null) {
-        extraHeaders.forEach((key, value) -> builder.setHeader(key, value));
-      }
-    };
-  }
-
-  protected Promise<WSResponse> postRequest(URL url, byte[] body) throws IOException {
-    return HttpPlugin.getInstance().postRequest(url, getContentType(), body,
-        getRequestPreparer(url, body, extraHeaders));
+  protected Promise<WSResponse> postRequest(URL url, byte[] body,
+      PostRequestPreparer postRequestPreparer) throws IOException {
+    return HttpPlugin.getInstance().postRequest(url, getContentType(), body, postRequestPreparer);
   }
 }

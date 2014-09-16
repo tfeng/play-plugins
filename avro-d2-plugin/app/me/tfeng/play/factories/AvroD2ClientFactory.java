@@ -25,6 +25,8 @@ import me.tfeng.play.plugins.AvroD2Plugin;
 import org.apache.avro.specific.SpecificData;
 import org.springframework.beans.factory.FactoryBean;
 
+import com.google.common.base.Objects;
+
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
@@ -35,11 +37,8 @@ public class AvroD2ClientFactory implements FactoryBean<Object> {
 
   @Override
   public Object getObject() throws Exception {
-    SpecificData specificData = this.specificData;
-    if (specificData == null) {
-      specificData = new SpecificData(interfaceClass.getClassLoader());
-    }
-    return AvroD2Plugin.client(interfaceClass, specificData);
+    return AvroD2Plugin.client(interfaceClass,
+        Objects.firstNonNull(specificData, new SpecificData(interfaceClass.getClassLoader())));
   }
 
   @Override

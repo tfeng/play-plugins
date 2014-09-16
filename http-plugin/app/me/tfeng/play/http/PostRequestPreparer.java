@@ -18,23 +18,17 @@
  * limitations under the License.
  */
 
-package org.apache.avro.ipc;
+package me.tfeng.play.http;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
+import java.net.URL;
 
-import me.tfeng.play.http.PostRequestPreparer;
-import play.libs.F.Promise;
+import com.ning.http.client.AsyncHttpClient;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public interface AsyncTransceiver {
+@FunctionalInterface
+public interface PostRequestPreparer {
 
-  public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request,
-      PostRequestPreparer postRequestPreparer) throws IOException;
-
-  public List<ByteBuffer> transceive(List<ByteBuffer> request,
-      PostRequestPreparer postRequestPreparer) throws IOException;
+  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url);
 }

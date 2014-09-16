@@ -126,7 +126,7 @@ public class JsonIpcController extends Controller {
       REQUEST_GETBYTES_METHOD = requestGetBytesMethod;
       RESPONSE_GETRESPONSE_METHOD = responseGetResponseMethod;
     } catch (Exception e) {
-      throw new RuntimeException(e);
+      throw new RuntimeException("Unable to initialize", e);
     }
   }
 
@@ -161,6 +161,9 @@ public class JsonIpcController extends Controller {
       return Results.ok(
           AvroHelper.toJson(avroProtocol.getMessages().get(message).getResponse(), response));
     } catch (AvroRemoteException e) {
+      // AvroRemoteException is thrown if getResponse() finds the response buffers contain an error
+      // defined in the interface specification. In that case, we return the error message in the
+      // HTTP response body.
       Schema schema = avroProtocol.getMessages().get(message).getErrors();
       return Results.badRequest(AvroHelper.toJson(schema, e.getValue()));
     }
@@ -177,6 +180,9 @@ public class JsonIpcController extends Controller {
 
   private static JsonNode enhanceWithDefaultFields(Schema schema, JsonNode json,
       JsonNodeFactory factory) {
+    // With incoming JSON requests, we allow users to omit fields that take default values. This is
+    // contrary to binary JSON format. If a field is missing and it has a default value according to
+    // the Avro schema, we insert the default value into the request.
     if (json instanceof ObjectNode && schema.getType() == Type.RECORD) {
       ObjectNode node = (ObjectNode) json;
       ObjectNode newNode = factory.objectNode();
