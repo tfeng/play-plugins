@@ -52,10 +52,8 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
   }
 
   private volatile Promise<WSResponse> promise;
-
   private final Semaphore semaphore = new Semaphore(1);
   private int timeout = HttpPlugin.getInstance().getRequestTimeout();
-
   private final URL url;
 
   public AsyncHttpTransceiver(URL url) {
@@ -108,6 +106,7 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
     this.timeout = timeout;
   }
 
+  @Override
   public List<ByteBuffer> transceive(List<ByteBuffer> request,
       PostRequestPreparer postRequestPreparer) throws IOException {
     try {

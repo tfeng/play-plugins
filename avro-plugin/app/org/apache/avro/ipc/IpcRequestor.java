@@ -30,7 +30,10 @@ import me.tfeng.play.http.PostRequestPreparer;
 import org.apache.avro.ipc.specific.SpecificRequestor;
 import org.apache.avro.specific.SpecificData;
 
+import play.Logger;
+import play.Logger.ALogger;
 import play.libs.F.Promise;
+import play.mvc.Controller;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -44,11 +47,9 @@ public class IpcRequestor extends SpecificRequestor {
     }
   }
 
-  public static final AuthTokenPreservingPostRequestPreparer
-      AUTH_TOKEN_PRESERVING_POST_REQUEST_PREPARER =
-          new AuthTokenPreservingPostRequestPreparer();
+  private static final ALogger LOG = Logger.of(IpcRequestor.class);
 
-  private PostRequestPreparer postRequestPreparer = AUTH_TOKEN_PRESERVING_POST_REQUEST_PREPARER;
+  private PostRequestPreparer postRequestPreparer;
 
   public IpcRequestor(Class<?> iface, AsyncTransceiver transceiver) throws IOException {
     super(iface, (Transceiver) transceiver);
@@ -67,6 +68,16 @@ public class IpcRequestor extends SpecificRequestor {
         asyncRequest.getMessage().isOneWay() ? null : new CallFuture<Object>();
     TransceiverCallback<Object> transceiverCallback =
         new TransceiverCallback<Object>(asyncRequest, callFuture);
+
+    PostRequestPreparer postRequestPreparer = this.postRequestPreparer;
+    if (postRequestPreparer == null) {
+      try {
+        postRequestPreparer = new AuthTokenPreservingPostRequestPreparer(Controller.request());
+      } catch (RuntimeException e) {
+        LOG.info("Unable to get current request; do not pass headers to downstream calls");
+      }
+    }
+
     if (Promise.class.isAssignableFrom(method.getReturnType())) {
       return transceiver.asyncTransceive(asyncRequest.getBytes(), postRequestPreparer).map(
           response -> {

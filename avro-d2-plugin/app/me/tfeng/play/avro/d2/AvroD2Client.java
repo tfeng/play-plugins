@@ -100,10 +100,15 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   }
 
   public void refresh() {
-    String path = AvroD2Helper.getZkPath(protocol);
     ZooKeeper zk = AvroD2Plugin.getInstance().getZooKeeper();
+    if (zk == null) {
+      LOG.warn("ZooKeeper is not configured; retry listing servers later");
+      scheduleRefresh();
+      return;
+    }
 
     List<String> children;
+    String path = AvroD2Helper.getZkPath(protocol);
     try {
       children = zk.getChildren(path, this);
     } catch (Exception e) {

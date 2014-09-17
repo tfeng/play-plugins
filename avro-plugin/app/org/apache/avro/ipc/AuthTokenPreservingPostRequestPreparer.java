@@ -23,9 +23,6 @@ package org.apache.avro.ipc;
 import java.net.URL;
 
 import me.tfeng.play.http.PostRequestPreparer;
-import play.Logger;
-import play.Logger.ALogger;
-import play.mvc.Controller;
 import play.mvc.Http.Request;
 
 import com.ning.http.client.AsyncHttpClient;
@@ -35,19 +32,17 @@ import com.ning.http.client.AsyncHttpClient;
  */
 public class AuthTokenPreservingPostRequestPreparer implements PostRequestPreparer {
 
-  private static final ALogger LOG = Logger.of(AuthTokenPreservingPostRequestPreparer.class);
+  private Request request;
+
+  public AuthTokenPreservingPostRequestPreparer(Request request) {
+    this.request = request;
+  }
 
   @Override
   public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
-    Request currentRequest = null;
-    try {
-      currentRequest = Controller.request();
-    } catch (RuntimeException e) {
-      LOG.info("Unable to get current request; do not pass headers to downstream calls");
-    }
-
-    if (currentRequest != null) {
-      builder.setHeader("Authorization", currentRequest.getHeader("Authorization"));
+    String authorization = request.getHeader("Authorization");
+    if (authorization != null) {
+      builder.setHeader("Authorization", authorization);
     }
   }
 }
