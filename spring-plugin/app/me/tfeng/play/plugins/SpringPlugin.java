@@ -63,21 +63,22 @@ public class SpringPlugin extends AbstractPlugin {
 
   @Override
   public void onStart() {
-    List<String> configLocations =
-        Lists.newArrayList(getConfiguration().getStringList("spring-plugin.spring-config-locations",
-            Collections.singletonList("classpath*:spring/*.xml")));
-
-    List<Plugin> plugins = Scala.asJava(getApplication().getWrappedApplication().plugins());
-    for (play.api.Plugin plugin : plugins) {
-      WithSpringConfig annotation = plugin.getClass().getAnnotation(WithSpringConfig.class);
-      if (annotation != null) {
-        Collections.addAll(configLocations, annotation.value());
-      }
-    }
-
     applicationContext = ApplicationContextHolder.get();
+
     if (applicationContext == null) {
+      List<String> configLocations =
+          Lists.newArrayList(getConfiguration().getStringList("spring-plugin.spring-config-locations",
+              Collections.singletonList("classpath*:spring/**/*.xml")));
+
+      List<Plugin> plugins = Scala.asJava(getApplication().getWrappedApplication().plugins());
+      for (play.api.Plugin plugin : plugins) {
+        WithSpringConfig annotation = plugin.getClass().getAnnotation(WithSpringConfig.class);
+        if (annotation != null) {
+          Collections.addAll(configLocations, annotation.value());
+        }
+      }
       LOG.info("Starting spring application context with config locations " + configLocations);
+
       ClassPathXmlApplicationContext classPathApplicationContext =
           new ClassPathXmlApplicationContext();
       List<String> activeProfiles =
@@ -96,6 +97,7 @@ public class SpringPlugin extends AbstractPlugin {
           configLocations.toArray(new String[configLocations.size()]));
       classPathApplicationContext.refresh();
       applicationContext = classPathApplicationContext;
+
     } else {
       LOG.info("Using spring application context in ApplicationContextHolder");
     }

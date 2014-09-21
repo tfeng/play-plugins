@@ -43,7 +43,7 @@ import sun.security.action.GetPropertyAction;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-@ContextConfiguration("classpath*:spring/*.xml")
+@ContextConfiguration({"classpath*:spring/**/*.xml", "classpath*:play-plugins/spring/**/*.xml"})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @RunWith(SpringJUnit4ClassRunner.class)
 public abstract class AbstractSpringTest {
