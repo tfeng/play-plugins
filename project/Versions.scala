@@ -10,6 +10,10 @@ object Versions {
 
   val avro = "1.7.7"
 
+  val junit = "4.11"
+
+  val mockito = "1.9.5"
+
   val mongoDb = "2.12.3"
 
   val spring = "4.0.3.RELEASE"

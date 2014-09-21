@@ -23,10 +23,12 @@ package me.tfeng.play.plugins;
 import java.util.Collections;
 import java.util.List;
 
+import me.tfeng.play.spring.ApplicationContextHolder;
 import me.tfeng.play.spring.WithSpringConfig;
 
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.core.env.AbstractEnvironment;
 
 import play.Application;
 import play.Logger;
@@ -48,7 +50,7 @@ public class SpringPlugin extends AbstractPlugin {
     return Play.application().plugin(SpringPlugin.class);
   }
 
-  private ClassPathXmlApplicationContext applicationContext;
+  private ConfigurableApplicationContext applicationContext;
 
   public SpringPlugin(Application application) {
     super(application);
@@ -73,9 +75,30 @@ public class SpringPlugin extends AbstractPlugin {
       }
     }
 
-    LOG.info("Starting spring application context with config locations " + configLocations);
-    applicationContext = new ClassPathXmlApplicationContext(
-        configLocations.toArray(new String[configLocations.size()]));
+    applicationContext = ApplicationContextHolder.get();
+    if (applicationContext == null) {
+      LOG.info("Starting spring application context with config locations " + configLocations);
+      ClassPathXmlApplicationContext classPathApplicationContext =
+          new ClassPathXmlApplicationContext();
+      List<String> activeProfiles =
+          getConfiguration().getStringList(AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME);
+      List<String> defaultProfiles =
+          getConfiguration().getStringList(AbstractEnvironment.DEFAULT_PROFILES_PROPERTY_NAME);
+      if (activeProfiles != null) {
+        classPathApplicationContext.getEnvironment().setActiveProfiles(
+            activeProfiles.toArray(new String[activeProfiles.size()]));
+      }
+      if (defaultProfiles != null) {
+        classPathApplicationContext.getEnvironment().setDefaultProfiles(
+            defaultProfiles.toArray(new String[defaultProfiles.size()]));
+      }
+      classPathApplicationContext.setConfigLocations(
+          configLocations.toArray(new String[configLocations.size()]));
+      classPathApplicationContext.refresh();
+      applicationContext = classPathApplicationContext;
+    } else {
+      LOG.info("Using spring application context in ApplicationContextHolder");
+    }
 
     super.onStart();
   }
