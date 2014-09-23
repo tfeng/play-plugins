@@ -30,6 +30,7 @@ import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 
 import me.tfeng.play.plugins.AvroPlugin;
 
@@ -195,6 +196,28 @@ public class JsonIpcController extends Controller {
           newNode.put(fieldName, Json.parse(field.defaultValue().toString()));
         } else {
           newNode.put(fieldName, factory.nullNode());
+        }
+      }
+      return newNode;
+    } else if (json instanceof ObjectNode && schema.getType() == Type.MAP) {
+      ObjectNode node = (ObjectNode) json;
+      ObjectNode newNode = factory.objectNode();
+      Schema valueType = schema.getValueType();
+      Iterator<Entry<String, JsonNode>> entries = node.fields();
+      while (entries.hasNext()) {
+        Entry<String, JsonNode> entry = entries.next();
+        newNode.put(entry.getKey(), enhanceWithDefaultFields(valueType, entry.getValue(), factory));
+      }
+      return newNode;
+    } else if (json instanceof ObjectNode && schema.getType() == Type.UNION) {
+      ObjectNode node = (ObjectNode) json;
+      ObjectNode newNode = factory.objectNode();
+      for (Schema unionType : schema.getTypes()) {
+        String typeName = unionType.getFullName();
+        JsonNode value = node.get(typeName);
+        if (value != null) {
+          newNode.put(typeName, enhanceWithDefaultFields(unionType, value, factory));
+          break;
         }
       }
       return newNode;
