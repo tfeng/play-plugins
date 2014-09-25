@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
+import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericData.Record;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.IndexedRecord;
@@ -92,7 +93,21 @@ public class RecordConverter {
 
   @SuppressWarnings("unchecked")
   private static Object getDbObject(Schema schema, Object object) {
-    if (object == null) {
+    if (schema.getType() == Type.UNION) {
+      List<Schema> types = schema.getTypes();
+      if (types.size() != 2
+          && types.get(0).getType() != Type.NULL
+          && types.get(1).getType() != Type.NULL) {
+        throw new RuntimeException(
+            "In a union type, only null unioned with exactly one other type is supported: "
+                + schema);
+      }
+      if (types.get(0).getType() == Type.NULL) {
+        return getDbObject(types.get(1), object);
+      } else {
+        return getDbObject(types.get(0), object);
+      }
+    } else if (object == null) {
       return null;
     } else if (object instanceof IndexedRecord) {
       return toDbObject((IndexedRecord) object);
