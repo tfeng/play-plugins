@@ -28,9 +28,7 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 
 import me.tfeng.play.plugins.AvroPlugin;
 
@@ -39,7 +37,6 @@ import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Protocol;
 import org.apache.avro.Protocol.Message;
 import org.apache.avro.Schema;
-import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.io.BinaryDecoder;
@@ -62,9 +59,6 @@ import play.mvc.Result;
 import play.mvc.Results;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -179,61 +173,6 @@ public class JsonIpcController extends Controller {
     }
   }
 
-  private static JsonNode enhanceWithDefaultFields(Schema schema, JsonNode json,
-      JsonNodeFactory factory) {
-    // With incoming JSON requests, we allow users to omit fields that take default values. This is
-    // contrary to binary JSON format. If a field is missing and it has a default value according to
-    // the Avro schema, we insert the default value into the request.
-    if (json instanceof ObjectNode && schema.getType() == Type.RECORD) {
-      ObjectNode node = (ObjectNode) json;
-      ObjectNode newNode = factory.objectNode();
-      for (Field field : schema.getFields()) {
-        String fieldName = field.name();
-        if (node.has(fieldName)) {
-          newNode.put(fieldName,
-              enhanceWithDefaultFields(field.schema(), node.get(fieldName), factory));
-        } else if (field.defaultValue() != null) {
-          newNode.put(fieldName, Json.parse(field.defaultValue().toString()));
-        } else {
-          newNode.put(fieldName, factory.nullNode());
-        }
-      }
-      return newNode;
-    } else if (json instanceof ObjectNode && schema.getType() == Type.MAP) {
-      ObjectNode node = (ObjectNode) json;
-      ObjectNode newNode = factory.objectNode();
-      Schema valueType = schema.getValueType();
-      Iterator<Entry<String, JsonNode>> entries = node.fields();
-      while (entries.hasNext()) {
-        Entry<String, JsonNode> entry = entries.next();
-        newNode.put(entry.getKey(), enhanceWithDefaultFields(valueType, entry.getValue(), factory));
-      }
-      return newNode;
-    } else if (json instanceof ObjectNode && schema.getType() == Type.UNION) {
-      ObjectNode node = (ObjectNode) json;
-      ObjectNode newNode = factory.objectNode();
-      for (Schema unionType : schema.getTypes()) {
-        String typeName = unionType.getFullName();
-        JsonNode value = node.get(typeName);
-        if (value != null) {
-          newNode.put(typeName, enhanceWithDefaultFields(unionType, value, factory));
-          break;
-        }
-      }
-      return newNode;
-    } else if (json instanceof ArrayNode && schema.getType() == Type.ARRAY) {
-      ArrayNode node = (ArrayNode) json;
-      ArrayNode newNode = factory.arrayNode();
-      Iterator<JsonNode> iterator = node.elements();
-      while (iterator.hasNext()) {
-        newNode.add(enhanceWithDefaultFields(schema.getElementType(), iterator.next(), factory));
-      }
-      return newNode;
-    } else {
-      return json;
-    }
-  }
-
   private static Object getRequest(Requestor requestor, Protocol protocol, String message,
       byte[] data) throws Throwable {
     Message messageObject = protocol.getMessages().get(message);
@@ -246,7 +185,7 @@ public class JsonIpcController extends Controller {
       data = "{}".getBytes(UTF8);
     }
     JsonNode node = Json.parse(new ByteArrayInputStream(data));
-    node = enhanceWithDefaultFields(schema, node, new JsonNodeFactory(false));
+    node = AvroHelper.convertFromSimpleRecord(schema, node);
     GenericDatumReader<Object> reader = new GenericDatumReader<Object>(schema);
     Object request = reader.read(null, DecoderFactory.get().jsonDecoder(schema, node.toString()));
     try {

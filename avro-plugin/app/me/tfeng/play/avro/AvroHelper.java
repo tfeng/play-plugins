@@ -22,9 +22,14 @@ package me.tfeng.play.avro;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.Schema;
+import org.apache.avro.Schema.Field;
+import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.avro.io.DecoderFactory;
@@ -36,10 +41,43 @@ import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
 
+import play.libs.Json;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
 public class AvroHelper {
+
+  public static JsonNode convertFromSimpleRecord(Schema schema, JsonNode json) throws IOException {
+    return convertFromSimpleRecord(schema, json, new JsonNodeFactory(false));
+  }
+
+  public static String convertFromSimpleRecord(Schema schema, String json) throws IOException {
+    if (json.isEmpty()) {
+      return json;
+    }
+    JsonNode node = Json.parse(json);
+    node = convertFromSimpleRecord(schema, node);
+    return node.toString();
+  }
+
+  public static JsonNode convertToSimpleRecord(Schema schema, JsonNode json) throws IOException {
+    return convertToSimpleRecord(schema, json, new JsonNodeFactory(false));
+  }
+
+  public static String convertToSimpleRecord(Schema schema, String json) throws IOException {
+    if (json.isEmpty()) {
+      return json;
+    }
+    JsonNode node = Json.parse(json);
+    node = convertToSimpleRecord(schema, node);
+    return node.toString();
+  }
 
   public static Protocol getProtocol(Class<?> interfaceClass) {
     return new SpecificData(interfaceClass.getClassLoader()).getProtocol(interfaceClass);
@@ -49,6 +87,21 @@ public class AvroHelper {
     return new SpecificData(schemaClass.getClassLoader()).getSchema(schemaClass);
   }
 
+  public static Schema getSimpleUnionType(Schema union) throws IOException {
+    if (union.getType() != Type.UNION) {
+      throw new IOException("Schema is not a union type: " + union);
+    }
+    List<Schema> types = union.getTypes();
+    if (types.size() == 2) {
+      if (types.get(0).getType() == Type.NULL && types.get(1).getType() != Type.NULL) {
+        return types.get(1);
+      } else if (types.get(1).getType() == Type.NULL && types.get(0).getType() != Type.NULL) {
+        return types.get(0);
+      }
+    }
+    return null;
+  }
+
   public static String toJson(IndexedRecord record) throws IOException {
     Schema schema = record.getSchema();
     return toJson(schema, record);
@@ -56,23 +109,156 @@ public class AvroHelper {
 
   public static String toJson(Schema schema, Object object) throws IOException {
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    GenericDatumWriter<Object> writer = new GenericDatumWriter<Object>(schema);
     JsonGenerator generator =
         new JsonFactory().createJsonGenerator(outputStream, JsonEncoding.UTF8);
     generator.useDefaultPrettyPrinter();
+    GenericDatumWriter<Object> writer = new GenericDatumWriter<Object>(schema);
     JsonEncoder encoder = EncoderFactory.get().jsonEncoder(schema, generator);
     writer.write(object, encoder);
     encoder.flush();
-    return outputStream.toString();
+    String json = outputStream.toString();
+    return AvroHelper.convertToSimpleRecord(schema, json);
   }
 
   public static <T> T toRecord(Class<T> recordClass, String json) throws IOException {
+    Schema schema = getSchema(recordClass);
+    json = convertFromSimpleRecord(schema, json);
     SpecificDatumReader<T> reader = new SpecificDatumReader<>(recordClass);
-    return reader.read(null, DecoderFactory.get().jsonDecoder(getSchema(recordClass), json));
+    return reader.read(null, DecoderFactory.get().jsonDecoder(schema, json));
   }
 
   public static <T> T toRecord(Schema schema, String json) throws IOException {
+    json = convertFromSimpleRecord(schema, json);
     SpecificDatumReader<T> reader = new SpecificDatumReader<>(schema);
     return reader.read(null, DecoderFactory.get().jsonDecoder(schema, json));
+  }
+
+  private static JsonNode convertFromSimpleRecord(Schema schema, JsonNode json,
+      JsonNodeFactory factory) throws IOException {
+    if (json.isObject() && schema.getType() == Type.RECORD) {
+      ObjectNode node = (ObjectNode) json;
+      ObjectNode newNode = factory.objectNode();
+      for (Field field : schema.getFields()) {
+        String fieldName = field.name();
+        if (node.has(fieldName)) {
+          newNode.put(fieldName,
+              convertFromSimpleRecord(field.schema(), node.get(fieldName), factory));
+        } else if (field.defaultValue() != null) {
+          newNode.put(fieldName, Json.parse(field.defaultValue().toString()));
+        } else {
+          newNode.put(fieldName, factory.nullNode());
+        }
+      }
+      return newNode;
+    } else if (json.isObject() && schema.getType() == Type.MAP) {
+      ObjectNode node = (ObjectNode) json;
+      ObjectNode newNode = factory.objectNode();
+      Schema valueType = schema.getValueType();
+      Iterator<Entry<String, JsonNode>> entries = node.fields();
+      while (entries.hasNext()) {
+        Entry<String, JsonNode> entry = entries.next();
+        newNode.put(entry.getKey(), convertFromSimpleRecord(valueType, entry.getValue(), factory));
+      }
+      return newNode;
+    } else if (schema.getType() == Type.UNION) {
+      Schema type = AvroHelper.getSimpleUnionType(schema);
+      if (type == null) {
+        if (json.isNull()) {
+          return json;
+        } else {
+          ObjectNode node = (ObjectNode) json;
+          Entry<String, JsonNode> entry = node.fields().next();
+          for (Schema unionType : schema.getTypes()) {
+            if (unionType.getFullName().equals(entry.getKey())) {
+              ObjectNode newNode = factory.objectNode();
+              newNode.put(entry.getKey(),
+                  convertFromSimpleRecord(unionType, entry.getValue(), factory));
+              return newNode;
+            }
+          }
+          throw new IOException("Unable to get schema for type " + entry.getKey() + " in union");
+        }
+      } else if (json.isNull()) {
+        return json;
+      } else {
+        ObjectNode newNode = factory.objectNode();
+        newNode.put(type.getFullName(), convertFromSimpleRecord(type, json, factory));
+        return newNode;
+      }
+    } else if (json.isArray() && schema.getType() == Type.ARRAY) {
+      ArrayNode node = (ArrayNode) json;
+      ArrayNode newNode = factory.arrayNode();
+      Iterator<JsonNode> iterator = node.elements();
+      while (iterator.hasNext()) {
+        newNode.add(convertFromSimpleRecord(schema.getElementType(), iterator.next(), factory));
+      }
+      return newNode;
+    } else {
+      return json;
+    }
+  }
+
+  private static JsonNode convertToSimpleRecord(Schema schema, JsonNode json,
+      JsonNodeFactory factory) throws IOException {
+    if (json.isObject() && schema.getType() == Type.RECORD) {
+      ObjectNode node = (ObjectNode) json;
+      ObjectNode newNode = factory.objectNode();
+      for (Field field : schema.getFields()) {
+        String fieldName = field.name();
+        if (node.has(fieldName)) {
+          JsonNode value = convertToSimpleRecord(field.schema(), node.get(fieldName), factory);
+          if (!value.isNull()) {
+            newNode.put(fieldName, value);
+          }
+        }
+      }
+      return newNode;
+    } else if (json.isObject() && schema.getType() == Type.MAP) {
+      ObjectNode node = (ObjectNode) json;
+      ObjectNode newNode = factory.objectNode();
+      Schema valueType = schema.getValueType();
+      Iterator<Entry<String, JsonNode>> entries = node.fields();
+      while (entries.hasNext()) {
+        Entry<String, JsonNode> entry = entries.next();
+        JsonNode value = convertToSimpleRecord(valueType, entry.getValue(), factory);
+        if (value.isNull()) {
+          newNode.put(entry.getKey(), value);
+        }
+      }
+      return newNode;
+    } else if (schema.getType() == Type.UNION) {
+      Schema type = AvroHelper.getSimpleUnionType(schema);
+      if (type == null) {
+        if (json.isNull()) {
+          return json;
+        } else {
+          ObjectNode node = (ObjectNode) json;
+          Entry<String, JsonNode> entry = node.fields().next();
+          for (Schema unionType : schema.getTypes()) {
+            if (unionType.getFullName().equals(entry.getKey())) {
+              ObjectNode newNode = factory.objectNode();
+              newNode.put(entry.getKey(),
+                  convertToSimpleRecord(unionType, entry.getValue(), factory));
+              return newNode;
+            }
+          }
+          throw new IOException("Unable to get schema for type " + entry.getKey() + " in union");
+        }
+      } else if (json.isNull()) {
+        return json;
+      } else {
+        return convertToSimpleRecord(type, json.get(type.getFullName()), factory);
+      }
+    } else if (json.isArray() && schema.getType() == Type.ARRAY) {
+      ArrayNode node = (ArrayNode) json;
+      ArrayNode newNode = factory.arrayNode();
+      Iterator<JsonNode> iterator = node.elements();
+      while (iterator.hasNext()) {
+        newNode.add(convertToSimpleRecord(schema.getElementType(), iterator.next(), factory));
+      }
+      return newNode;
+    } else {
+      return json;
+    }
   }
 }
