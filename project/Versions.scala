@@ -2,9 +2,9 @@ package me.tfeng.play.plugins
 
 object Versions {
 
-  val project = "0.2.2-SNAPSHOT"
+  val project = "0.2.2"
 
-  val sbtPlugins = "0.2.2-SNAPSHOT"
+  val sbtPlugins = "0.2.2"
 
   val scala = "2.10.4"
 
@@ -26,7 +26,7 @@ object Versions {
 
   val httpComponents = "4.3.2"
 
-  val webjarsLocator = "0.18"
+  val webjarsLocator = "0.19"
 
   val zookeeper = "3.4.6"
 }
