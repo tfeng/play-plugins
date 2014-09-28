@@ -28,10 +28,11 @@ import java.util.List;
 import me.tfeng.play.plugins.AvroPlugin;
 
 import org.apache.avro.ipc.AsyncHttpTransceiver;
-import org.apache.avro.ipc.IpcResponder;
+import org.apache.avro.ipc.AsyncResponder;
 import org.apache.http.entity.ContentType;
 
 import play.Play;
+import play.libs.F.Promise;
 import play.mvc.BodyParser;
 import play.mvc.Controller;
 import play.mvc.Result;
@@ -45,7 +46,7 @@ public class BinaryIpcController extends Controller {
   public static final String CONTENT_TYPE = "avro/binary";
 
   @BodyParser.Of(BodyParser.Raw.class)
-  public static Result post(String protocol) throws Throwable {
+  public static Promise<Result> post(String protocol) throws Throwable {
     String contentTypeHeader = request().getHeader("content-type");
     ContentType contentType = ContentType.parse(contentTypeHeader);
     if (!CONTENT_TYPE.equals(contentType.getMimeType())) {
@@ -59,19 +60,16 @@ public class BinaryIpcController extends Controller {
     byte[] bytes = request().body().asRaw().asBytes();
 
     List<ByteBuffer> buffers = AsyncHttpTransceiver.readBuffers(new ByteArrayInputStream(bytes));
-    IpcResponder responder = new IpcResponder(protocolClass, implementation);
-    List<ByteBuffer> response = responder.respond(buffers);
-    Exception unexpectedError = responder.getUnexpectedError();
-    if (unexpectedError != null) {
-      throw unexpectedError;
-    }
-
-    ByteArrayOutputStream outStream = new ByteArrayOutputStream();
-    try {
-      AsyncHttpTransceiver.writeBuffers(response, outStream);
-    } finally {
-      outStream.close();
-    }
-    return Results.ok(outStream.toByteArray());
+    AsyncResponder responder = new AsyncResponder(protocolClass, implementation);
+    Promise<List<ByteBuffer>> response = responder.asyncRespond(buffers);
+    return response.map(result -> {
+      ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+      try {
+        AsyncHttpTransceiver.writeBuffers(result, outStream);
+      } finally {
+        outStream.close();
+      }
+      return Results.ok(outStream.toByteArray());
+    });
   }
 }
