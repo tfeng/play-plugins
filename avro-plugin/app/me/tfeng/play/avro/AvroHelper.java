@@ -102,6 +102,10 @@ public class AvroHelper {
     return null;
   }
 
+  public static boolean isAvroClient(Class<?> clientClass) {
+    return clientClass.getAnnotation(AvroClient.class) != null;
+  }
+
   public static String toJson(IndexedRecord record) throws IOException {
     Schema schema = record.getSchema();
     return toJson(schema, record);

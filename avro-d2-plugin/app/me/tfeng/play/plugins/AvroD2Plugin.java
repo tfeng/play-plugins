@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import me.tfeng.play.avro.AvroHelper;
 import me.tfeng.play.avro.d2.AvroD2Client;
@@ -84,6 +85,8 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
   @Value("${avro-d2-plugin.client-refresh-retry-delay-ms:1000}")
   private long clientRefreshRetryDelay;
 
+  private boolean expired;
+
   private Map<Class<?>, String> protocolPaths;
 
   private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -109,6 +112,15 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
 
   public AvroD2Plugin(Application application) {
     super(application);
+  }
+
+  public void connect() {
+    try {
+      zk = new ZooKeeper(zkConnectString, zkSessionTimeout, this);
+    } catch (IOException e) {
+      getScheduler().schedule(() -> connect(), getClientRefreshRetryDelay(), TimeUnit.MILLISECONDS);
+      LOG.warn("Unable to connect to ZooKeeper; retry later", e);
+    }
   }
 
   public long getClientRefreshRetryDelay() {
@@ -138,12 +150,7 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
       protocolPaths = Collections.emptyMap();
     }
 
-    try {
-      zk = new ZooKeeper(zkConnectString, zkSessionTimeout, this);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to connect to ZooKeeper", e);
-    }
-
+    connect();
     startServers();
   }
 
@@ -155,23 +162,41 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
   @Override
   public void process(WatchedEvent event) {
     LOG.info(event.toString());
+    switch (event.getState()) {
+    case SyncConnected:
+      if (expired) {
+        expired = false;
+        servers.forEach(server -> server.register());
+      }
+      break;
+    case Expired:
+      expired = true;
+      try {
+        zk.close();
+      } catch (InterruptedException e) {
+        // Ignore.
+      }
+      connect();
+    default:
+    }
   }
 
   public void startServers() {
-    try {
-      servers = new ArrayList<>(protocolPaths.size());
-      for (Entry<Class<?>, String> entry : protocolPaths.entrySet()) {
-        Protocol protocol = AvroHelper.getProtocol(entry.getKey());
-        String path = entry.getValue();
-        if (!path.startsWith("/")) {
-          path = "/" + path;
-        }
-        URL url = new URL("http", serverHost, serverPort, path);
-        AvroD2Server server = new AvroD2Server(zk, protocol, url);
-        servers.add(server);
+    servers = new ArrayList<>(protocolPaths.size());
+    for (Entry<Class<?>, String> entry : protocolPaths.entrySet()) {
+      Protocol protocol = AvroHelper.getProtocol(entry.getKey());
+      String path = entry.getValue();
+      if (!path.startsWith("/")) {
+        path = "/" + path;
       }
-    } catch (Exception e) {
-      throw new RuntimeException("Unable to initialize server", e);
+      URL url;
+      try {
+        url = new URL("http", serverHost, serverPort, path);
+      } catch (Exception e) {
+        throw new RuntimeException("Unable to initialize server", e);
+      }
+      AvroD2Server server = new AvroD2Server(protocol, url);
+      servers.add(server);
     }
   }
 

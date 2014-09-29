@@ -34,6 +34,8 @@ import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.ipc.Responder;
 import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.http.entity.ContentType;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import play.Play;
 import play.libs.F.Promise;
@@ -72,28 +74,36 @@ public class JsonIpcController extends Controller {
     byte[] bytes = request().body().asRaw().asBytes();
     SpecificResponder responder = new SpecificResponder(protocolClass, implementation);
     Object request = getRequest(responder, avroMessage, bytes);
-    try {
-      Object response = responder.respond(avroMessage, request);
-      if (response instanceof Promise) {
-        return ((Promise<?>) response)
-            .<Result>map(result ->
-                Results.ok(AvroHelper.toJson(avroMessage.getResponse(), result)))
-            .recover(e -> {
-              try {
-                return Results.badRequest(AvroHelper.toJson(avroMessage.getErrors(), e));
-              } catch (Exception e2) {
-                throw e;
-              }
-            });
-      } else {
-        return Promise.pure(Results.ok(AvroHelper.toJson(avroMessage.getResponse(), response)));
-      }
-    } catch (Exception e) {
-      try {
-        return Promise.pure(Results.badRequest(AvroHelper.toJson(avroMessage.getErrors(), e)));
-      } catch (Exception e2) {
-        throw e;
-      }
+    if (AvroHelper.isAvroClient(protocolClass)) {
+      Promise<?> promise = (Promise<?>) responder.respond(avroMessage, request);
+      return promise
+          .<Result>map(result -> Results.ok(AvroHelper.toJson(avroMessage.getResponse(), result)))
+          .recover(e -> {
+            try {
+              return Results.badRequest(AvroHelper.toJson(avroMessage.getErrors(), e));
+            } catch (Exception e2) {
+              throw e;
+            }
+          });
+    } else {
+      Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+      return Promise.promise(() -> {
+        Authentication currentAuthentication =
+            SecurityContextHolder.getContext().getAuthentication();
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+          Object result = responder.respond(avroMessage, request);
+          return Results.ok(AvroHelper.toJson(avroMessage.getResponse(), result));
+        } catch (Exception e) {
+          try {
+            return Results.badRequest(AvroHelper.toJson(avroMessage.getErrors(), e));
+          } catch (Exception e2) {
+            throw e;
+          }
+        } finally {
+          SecurityContextHolder.getContext().setAuthentication(currentAuthentication);
+        }
+      }, AvroPlugin.getInstance().getExecutionContext());
     }
   }
 

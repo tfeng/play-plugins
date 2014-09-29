@@ -131,7 +131,8 @@ public class AvroD2Client implements Watcher, InvocationHandler {
       }
 
       if (serverUrls.isEmpty()) {
-        LOG.warn("Unable to get any server URL for protocol " + protocol.getName() + "; retry later");
+        LOG.warn("Unable to get any server URL for protocol " + protocol.getName()
+            + "; retry later");
         scheduleRefresh();
       }
     }

@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
+import me.tfeng.play.avro.AvroHelper;
+
 import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Protocol;
 import org.apache.avro.Protocol.Message;
@@ -40,6 +42,8 @@ import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.ByteBufferInputStream;
 import org.apache.avro.util.ByteBufferOutputStream;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import play.libs.F.Promise;
 
@@ -68,20 +72,26 @@ public class AsyncResponder extends SpecificResponder {
     }
   }
 
+  private final Object impl;
+
   public AsyncResponder(Class<?> iface, Object impl) {
     super(iface, impl);
+    this.impl = impl;
   }
 
   public AsyncResponder(Class<?> iface, Object impl, SpecificData data) {
     super(iface, impl, data);
+    this.impl = impl;
   }
 
   public AsyncResponder(Protocol protocol, Object impl) {
     super(protocol, impl);
+    this.impl = impl;
   }
 
   public AsyncResponder(Protocol protocol, Object impl, SpecificData data) {
     super(protocol, impl, data);
+    this.impl = impl;
   }
 
   public Promise<List<ByteBuffer>> asyncRespond(List<ByteBuffer> buffers) throws Exception {
@@ -122,37 +132,40 @@ public class AsyncResponder extends SpecificResponder {
       plugin.serverReceiveRequest(context);
     }
 
-    Object response = null;
-    try {
-      response = respond(m, request);
-      if (response instanceof Promise) {
-        List<ByteBuffer> handshakeFinal = handshake;
-        Object responseFinal = response;
-        return ((Promise<?>) response)
-            .map(result -> {
-              context.setResponse(result);
-              processResult(bbo, out, context, m, payload, handshakeFinal, responseFinal, null);
-              return bbo.getBufferList();
-            })
-            .recover(e -> {
-              if (e instanceof Exception) {
-                context.setError((Exception) e);
-                processResult(bbo, out, context, m, payload, handshakeFinal, responseFinal,
-                    (Exception) e);
-                return bbo.getBufferList();
-              } else {
-                throw e;
-              }
-            });
-      } else {
-        context.setResponse(response);
-        processResult(bbo, out, context, m, payload, handshake, response, null);
-        return Promise.pure(bbo.getBufferList());
-      }
-    } catch (Exception e) {
-      context.setError(e);
-      processResult(bbo, out, context, m, payload, handshake, response, e);
-      return Promise.pure(bbo.getBufferList());
+    List<ByteBuffer> handshakeFinal = handshake;
+    if (AvroHelper.isAvroClient(impl.getClass())) {
+      Promise<?> promise = (Promise<?>) respond(m, request);
+      return promise.map(result -> {
+          context.setResponse(result);
+          processResult(bbo, out, context, m, payload, handshakeFinal, result, null);
+          return bbo.getBufferList();
+      }).recover(e -> {
+        if (e instanceof Exception) {
+          context.setError((Exception) e);
+          processResult(bbo, out, context, m, payload, handshakeFinal, null, (Exception) e);
+          return bbo.getBufferList();
+        } else {
+          throw e;
+        }
+      });
+    } else {
+      Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+      return Promise.promise(() -> {
+        Authentication currentAuthentication =
+            SecurityContextHolder.getContext().getAuthentication();
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+          Object result = respond(m, request);
+          context.setResponse(result);
+          processResult(bbo, out, context, m, payload, handshakeFinal, result, null);
+        } catch (Exception e) {
+          context.setError(e);
+          processResult(bbo, out, context, m, payload, handshakeFinal, null, e);
+        } finally {
+          SecurityContextHolder.getContext().setAuthentication(currentAuthentication);
+        }
+        return bbo.getBufferList();
+      });
     }
   }
 

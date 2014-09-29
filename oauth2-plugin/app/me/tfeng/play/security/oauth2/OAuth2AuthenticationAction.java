@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import me.tfeng.play.plugins.OAuth2Plugin;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -57,32 +58,38 @@ public class OAuth2AuthenticationAction extends Action<OAuth2Authentication> {
 
   protected static Promise<Result> authorizeAndCall(Context context, Action<?> delegate)
       throws Throwable {
-    Request request = context.request();
-    String token = getAuthorizationToken(request);
-    if (token == null) {
-      LOG.info("Authentication skipped");
-      SecurityContextHolder.clearContext();
-      try {
-        return delegate.call(context).recover(t -> handleAuthenticationError(t));
-      } catch (Throwable t) {
-        return Promise.pure(handleAuthenticationError(t));
-      }
-    } else {
-      Promise<me.tfeng.play.security.oauth2.Authentication> promise =
-          OAuth2Plugin.getInstance().getAuthenticationManager().authenticate(token);
-      return promise.flatMap(authentication -> {
-        LOG.info("Authentication completed");
-        org.springframework.security.oauth2.provider.OAuth2Authentication oauth2Authentication =
-            new org.springframework.security.oauth2.provider.OAuth2Authentication(
-                getOAuth2Request(authentication.getClient()),
-                getAuthentication(authentication.getUser()));
-        SecurityContextHolder.getContext().setAuthentication(oauth2Authentication);
+    Authentication currentAuthentication =
+        SecurityContextHolder.getContext().getAuthentication();
+    try {
+      Request request = context.request();
+      String token = getAuthorizationToken(request);
+      if (token == null) {
+        LOG.info("Authentication skipped");
+        SecurityContextHolder.clearContext();
         try {
           return delegate.call(context).recover(t -> handleAuthenticationError(t));
         } catch (Throwable t) {
           return Promise.pure(handleAuthenticationError(t));
         }
-      }).recover(t -> handleAuthenticationError(t));
+      } else {
+        Promise<me.tfeng.play.security.oauth2.Authentication> promise =
+            OAuth2Plugin.getInstance().getAuthenticationManager().authenticate(token);
+        return promise.flatMap(authentication -> {
+          LOG.info("Authentication completed");
+          org.springframework.security.oauth2.provider.OAuth2Authentication oauth2Authentication =
+              new org.springframework.security.oauth2.provider.OAuth2Authentication(
+                  getOAuth2Request(authentication.getClient()),
+                  getAuthentication(authentication.getUser()));
+          SecurityContextHolder.getContext().setAuthentication(oauth2Authentication);
+          try {
+            return delegate.call(context).recover(t -> handleAuthenticationError(t));
+          } catch (Throwable t) {
+            return Promise.pure(handleAuthenticationError(t));
+          }
+        }).recover(t -> handleAuthenticationError(t));
+      }
+    } finally {
+      SecurityContextHolder.getContext().setAuthentication(currentAuthentication);
     }
   }
 

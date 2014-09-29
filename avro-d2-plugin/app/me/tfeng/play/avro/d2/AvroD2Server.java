@@ -47,10 +47,8 @@ public class AvroD2Server implements Watcher {
   protected volatile String nodePath;
   protected final Protocol protocol;
   protected final URL url;
-  protected final ZooKeeper zk;
 
-  public AvroD2Server(ZooKeeper zk, Protocol protocol, URL url) {
-    this.zk = zk;
+  public AvroD2Server(Protocol protocol, URL url) {
     this.protocol = protocol;
     this.url = url;
     register();
@@ -61,7 +59,7 @@ public class AvroD2Server implements Watcher {
     if (path != null) {
       LOG.info("Closing server for " + protocol.getName() + " at " + url);
       try {
-        zk.delete(path, -1);
+        AvroD2Plugin.getInstance().getZooKeeper().delete(path, -1);
       } catch (NoNodeException e) {
         // Ignore.
       }
@@ -90,8 +88,8 @@ public class AvroD2Server implements Watcher {
   public synchronized void register() {
     try {
       close();
-
       LOG.info("Registering server for " + protocol.getName() + " at " + url);
+      ZooKeeper zk = AvroD2Plugin.getInstance().getZooKeeper();
       nodePath = AvroD2Helper.createProtocolNode(zk, protocol, url);
       zk.getData(nodePath, this, null);
     } catch (Exception e) {
