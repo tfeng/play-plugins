@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import me.tfeng.play.avro.AvroHelper;
+import me.tfeng.play.plugins.AvroPlugin;
 
 import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Protocol;
@@ -165,7 +166,7 @@ public class AsyncResponder extends SpecificResponder {
           SecurityContextHolder.getContext().setAuthentication(currentAuthentication);
         }
         return bbo.getBufferList();
-      });
+      }, AvroPlugin.getInstance().getExecutionContext());
     }
   }
 
