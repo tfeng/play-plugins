@@ -84,14 +84,14 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
       writeBuffers(request, postRequestPreparer);
       return this;
     }, AvroPlugin.getInstance().getExecutionContext()).flatMap(transceiver -> {
-      Promise<List<ByteBuffer>> promise = transceiver.asyncReadBuffers();
-      promise.onFailure(throwable -> {
-        transceiver.semaphore.release();
-      });
-      promise.onRedeem(response -> {
-        transceiver.semaphore.release();
-      });
-      return promise;
+      return transceiver.asyncReadBuffers().<List<ByteBuffer>>transform(
+          result -> {
+            transceiver.semaphore.release();
+            return result;
+          }, throwable -> {
+            transceiver.semaphore.release();
+            return throwable;
+          });
     });
   }
 
