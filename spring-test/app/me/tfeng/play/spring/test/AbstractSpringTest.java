@@ -22,12 +22,7 @@ package me.tfeng.play.spring.test;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
-import java.nio.channels.OverlappingFileLockException;
 import java.security.AccessController;
-import java.util.concurrent.Semaphore;
 
 import me.tfeng.play.spring.ApplicationContextHolder;
 
@@ -50,51 +45,24 @@ import sun.security.action.GetPropertyAction;
 @RunWith(SpringJUnit4ClassRunner.class)
 public abstract class AbstractSpringTest {
 
-  private static final Semaphore SEMAPHORE = new Semaphore(1);
-
   private static final File TEMPORARY_DIRECTORY =
       new File(AccessController.doPrivileged(new GetPropertyAction("java.io.tmpdir")));
 
   @Autowired
   protected ConfigurableApplicationContext applicationContext;
 
-  private FileLock testLock;
-
   @After
   public void afterTest() throws IOException {
-    if (requireLocking()) {
-      SEMAPHORE.release();
-      if (testLock != null) {
-        testLock.release();
-        testLock = null;
-      }
-    }
+    TestLock.unlock();
   }
 
   @Before
   public void beforeTest() throws IOException, InterruptedException {
-    if (requireLocking()) {
-      File file = lockFile();
-      if (file != null) {
-        @SuppressWarnings("resource")
-        FileChannel channel = new RandomAccessFile(file, "rw").getChannel();
-        try {
-          testLock = channel.lock();
-        } catch (OverlappingFileLockException e) {
-          // Ignore.
-        }
-        SEMAPHORE.acquire();
-      }
-    }
-
+    TestLock.lock(lockFile());
     ApplicationContextHolder.set(applicationContext);
   }
 
   protected File lockFile() throws IOException {
     return new File(TEMPORARY_DIRECTORY, "play-test.lock");
-  }
-
-  protected boolean requireLocking() {
-    return true;
   }
 }
