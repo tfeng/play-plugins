@@ -4,7 +4,7 @@ object Versions {
 
   val project = "0.2.6-SNAPSHOT"
 
-  val sbtPlugins = "0.2.4"
+  val sbtPlugins = "0.2.6-SNAPSHOT"
 
   val scala = "2.10.4"
 

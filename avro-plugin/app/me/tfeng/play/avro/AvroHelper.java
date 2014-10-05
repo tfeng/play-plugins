@@ -30,13 +30,13 @@ import org.apache.avro.Protocol;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.io.JsonEncoder;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificDatumReader;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
@@ -116,7 +116,7 @@ public class AvroHelper {
     JsonGenerator generator =
         new JsonFactory().createJsonGenerator(outputStream, JsonEncoding.UTF8);
     generator.useDefaultPrettyPrinter();
-    GenericDatumWriter<Object> writer = new GenericDatumWriter<Object>(schema);
+    SpecificDatumWriter<Object> writer = new SpecificDatumWriter<Object>(schema);
     JsonEncoder encoder = EncoderFactory.get().jsonEncoder(schema, generator);
     writer.write(object, encoder);
     encoder.flush();

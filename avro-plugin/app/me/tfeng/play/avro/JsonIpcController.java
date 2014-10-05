@@ -37,6 +37,8 @@ import org.apache.http.entity.ContentType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import play.Logger;
+import play.Logger.ALogger;
 import play.Play;
 import play.libs.F.Promise;
 import play.libs.Json;
@@ -53,6 +55,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class JsonIpcController extends Controller {
 
   public static final String CONTENT_TYPE = "avro/json";
+
+  private static final ALogger LOG = Logger.of(JsonIpcController.class);
 
   private static final Charset UTF8 = Charset.forName("utf-8");
 
@@ -80,6 +84,7 @@ public class JsonIpcController extends Controller {
           .<Result>map(result -> Results.ok(AvroHelper.toJson(avroMessage.getResponse(), result)))
           .recover(e -> {
             try {
+              LOG.warn("Exception thrown while processing request; returning bad request", e);
               return Results.badRequest(AvroHelper.toJson(avroMessage.getErrors(), e));
             } catch (Exception e2) {
               throw e;
@@ -96,6 +101,7 @@ public class JsonIpcController extends Controller {
           return Results.ok(AvroHelper.toJson(avroMessage.getResponse(), result));
         } catch (Exception e) {
           try {
+            LOG.warn("Exception thrown while processing request; returning bad request", e);
             return Results.badRequest(AvroHelper.toJson(avroMessage.getErrors(), e));
           } catch (Exception e2) {
             throw e;
