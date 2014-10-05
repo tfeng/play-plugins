@@ -31,6 +31,7 @@ import org.apache.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.common.exceptions.ClientAuthenticationException;
 import org.springframework.security.oauth2.provider.ClientRegistrationException;
@@ -78,11 +79,19 @@ public class OAuth2Plugin extends AbstractPlugin {
   @Qualifier("oauth2-plugin.authentication-manager")
   private AuthenticationManagerClient authenticationManager;
 
+  @Autowired(required = false)
+  @Qualifier("oauth2-plugin.permission-evaluator")
+  private PermissionEvaluator permissionEvaluator;
+
   public OAuth2Plugin(Application application) {
     super(application);
   }
 
   public AuthenticationManagerClient getAuthenticationManager() {
     return authenticationManager;
+  }
+
+  public PermissionEvaluator getPermissionEvaluator() {
+    return permissionEvaluator;
   }
 }
