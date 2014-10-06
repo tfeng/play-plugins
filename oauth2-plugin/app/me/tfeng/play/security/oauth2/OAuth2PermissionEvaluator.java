@@ -39,8 +39,7 @@ public class OAuth2PermissionEvaluator implements PermissionEvaluator {
     if (permissionEvaluator == null) {
       throw new RuntimeException("Permission evaluator is not configured");
     } else {
-      return permissionEvaluator.hasPermission(authentication, targetDomainObject,
-          permissionEvaluator);
+      return permissionEvaluator.hasPermission(authentication, targetDomainObject, permission);
     }
   }
 
@@ -51,8 +50,7 @@ public class OAuth2PermissionEvaluator implements PermissionEvaluator {
     if (permissionEvaluator == null) {
       throw new RuntimeException("Permission evaluator is not configured");
     } else {
-      return permissionEvaluator.hasPermission(authentication, targetId, targetType,
-          permissionEvaluator);
+      return permissionEvaluator.hasPermission(authentication, targetId, targetType, permission);
     }
   }
 }

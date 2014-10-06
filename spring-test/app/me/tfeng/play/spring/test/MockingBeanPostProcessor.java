@@ -20,11 +20,13 @@
 
 package me.tfeng.play.spring.test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.mockito.Mockito;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
 /**
@@ -34,20 +36,42 @@ public class MockingBeanPostProcessor implements BeanPostProcessor {
 
   private Map<String, Class<?>> beans;
   private List<Class<?>> classes;
+  private Map<Class<?>, Object> mocksForClasses = new HashMap<>();
 
   @Override
   public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
     if (beans != null) {
       Class<?> beanClass = beans.get(beanName);
       if (beanClass != null) {
-        return Mockito.mock(beanClass);
+        return getMockForClass(beanClass);
       }
     }
 
     if (classes != null) {
       for (Class<?> beanClass : classes) {
         if (beanClass.isInstance(bean)) {
-          return Mockito.mock(beanClass);
+          return getMockForClass(beanClass);
+        } else if (bean instanceof FactoryBean
+            && ((FactoryBean<?>) bean).getObjectType().isAssignableFrom(beanClass)) {
+          return new FactoryBean<Object>() {
+
+            private Object mock = getMockForClass(beanClass);
+
+            @Override
+            public Object getObject() throws Exception {
+              return mock;
+            }
+
+            @Override
+            public Class<?> getObjectType() {
+              return beanClass;
+            }
+
+            @Override
+            public boolean isSingleton() {
+              return true;
+            }
+          };
         }
       }
     }
@@ -67,5 +91,14 @@ public class MockingBeanPostProcessor implements BeanPostProcessor {
 
   public void setClasses(List<Class<?>> classes) {
     this.classes = classes;
+  }
+
+  private Object getMockForClass(Class<?> beanClass) {
+    Object mock = mocksForClasses.get(beanClass);
+    if (mock == null) {
+      mock = Mockito.mock(beanClass);
+      mocksForClasses.put(beanClass, mock);
+    }
+    return mock;
   }
 }
