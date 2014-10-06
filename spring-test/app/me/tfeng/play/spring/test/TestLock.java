@@ -24,7 +24,10 @@ import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.util.concurrent.Semaphore;
+import java.nio.channels.OverlappingFileLockException;
+
+import play.Logger;
+import play.Logger.ALogger;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -33,37 +36,50 @@ public final class TestLock {
 
   private static FileLock fileLock;
 
+  private static final Object LOCAL_LOCK = new Object();
+
   private static File lockFile;
 
-  private static final Semaphore SEMAPHORE = new Semaphore(1);
+  private static final ALogger LOG = Logger.of(TestLock.class);
 
   public static void lock(File file) {
-    try {
-      SEMAPHORE.acquire();
-      if (fileLock != null) {
-        throw new RuntimeException("Unexpected State!!!");
+    synchronized (LOCAL_LOCK) {
+      try {
+        if (fileLock != null) {
+          throw new RuntimeException("Unexpected State!!!");
+        }
+        if (file != null) {
+          @SuppressWarnings("resource")
+          FileChannel channel = new RandomAccessFile(file, "rw").getChannel();
+          do {
+            try {
+              fileLock = channel.lock();
+              break;
+            } catch (OverlappingFileLockException e) {
+              LOG.info("The lock is being held by anther test; waiting for 1 second before "
+                  + "retrying ...");
+              LOCAL_LOCK.wait(1000);
+            }
+          } while (true);
+          lockFile = file;
+        }
+      } catch (Exception e) {
+        throw new RuntimeException("Unable to lock " + file, e);
       }
-      if (file != null) {
-        @SuppressWarnings("resource")
-        FileChannel channel = new RandomAccessFile(file, "rw").getChannel();
-        fileLock = channel.lock(0, 0, false);
-        lockFile = file;
-      }
-    } catch (Exception e) {
-      throw new RuntimeException("Unable to lock " + file, e);
     }
   }
 
   public static void unlock() {
-    try {
-      if (fileLock != null) {
-        fileLock.close();
-        fileLock = null;
-        lockFile = null;
+    synchronized (LOCAL_LOCK) {
+      try {
+        if (fileLock != null) {
+          fileLock.close();
+          fileLock = null;
+          lockFile = null;
+        }
+      } catch (Exception e) {
+        throw new RuntimeException("Unable to unlock " + lockFile, e);
       }
-      SEMAPHORE.release();
-    } catch (Exception e) {
-      throw new RuntimeException("Unable to unlock " + lockFile, e);
     }
   }
 }
