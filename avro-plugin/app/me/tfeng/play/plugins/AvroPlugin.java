@@ -40,6 +40,7 @@ import play.Logger;
 import play.Logger.ALogger;
 import play.Play;
 import play.libs.Akka;
+import play.libs.HttpExecution;
 import scala.concurrent.ExecutionContext;
 
 /**
@@ -113,7 +114,7 @@ public class AvroPlugin extends AbstractPlugin {
   }
 
   public ExecutionContext getExecutionContext() {
-    return executionContext;
+    return HttpExecution.fromThread(executionContext);
   }
 
   public Map<Class<?>, Object> getProtocolImplementations() {
