@@ -66,7 +66,7 @@ public class OplogListener implements Startable {
 
         OplogItem oplogItem = RecordConverter.toRecord(OplogItem.class, object);
         handler.handle(oplogItem);
-      } while (true);
+      } while (!stopping.get());
     }
   }
 
