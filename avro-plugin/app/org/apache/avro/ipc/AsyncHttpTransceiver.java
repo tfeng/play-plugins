@@ -33,7 +33,8 @@ import me.tfeng.play.http.PostRequestPreparer;
 import me.tfeng.play.plugins.AvroPlugin;
 import me.tfeng.play.plugins.HttpPlugin;
 
-import org.apache.avro.AvroRemoteException;
+import org.apache.avro.AvroRuntimeException;
+import org.apache.avro.specific.SpecificRecord;
 
 import play.libs.F.Promise;
 import play.libs.ws.WSResponse;
@@ -62,23 +63,31 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
   }
 
   public Promise<List<ByteBuffer>> asyncReadBuffers() throws IOException {
-    return promise.map(response -> {
-      try {
-        int status = response.getStatus();
-        if (status >= 400) {
-          throw new AsyncHttpException(status, url);
+    return promise.transform(
+        response -> {
+          try {
+            int status = response.getStatus();
+            if (status >= 400) {
+              throw new AsyncHttpException(status, url);
+            }
+            InputStream stream = response.getBodyAsStream();
+            return readBuffers(stream);
+          } catch (Throwable t) {
+            throw new AvroRuntimeException(t);
+          }
+        },
+      throwable -> {
+        if (throwable instanceof SpecificRecord || throwable instanceof RuntimeException) {
+          return throwable;
+        } else {
+          return new AvroRuntimeException(throwable);
         }
-        InputStream stream = response.getBodyAsStream();
-        return readBuffers(stream);
-      } catch (Throwable t) {
-        throw new AvroRemoteException(t);
-      }
-    });
+      });
   }
 
   @Override
   public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request,
-      PostRequestPreparer postRequestPreparer) throws IOException {
+      PostRequestPreparer postRequestPreparer) {
     return Promise.promise(() -> {
       semaphore.acquire();
       writeBuffers(request, postRequestPreparer);
