@@ -19,8 +19,6 @@
  */
 import static org.fest.assertions.Assertions.assertThat;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
@@ -41,10 +39,17 @@ import org.bson.types.ObjectId;
 import org.junit.Test;
 
 import play.libs.Json;
+import test.Arrays;
+import test.Empty;
+import test.Enums;
 import test.Ids;
+import test.Maps;
 import test.Names;
+import test.Primitives;
+import test.Records;
 import test.Types1;
 import test.Types2;
+import test.Unions;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -59,7 +64,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testArrays() throws Exception {
-    Schema schema = getSchema("schemata/arrays.avsc");
+    Schema schema = Arrays.SCHEMA$;
 
     GenericRecordBuilder builder = new GenericRecordBuilder(schema);
     builder.set("arrays", ImmutableList.of(ImmutableList.of(ImmutableList.of(1, 2, 3),
@@ -77,7 +82,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testEmpty() throws Exception {
-    Schema schema = getSchema("schemata/empty.avsc");
+    Schema schema = Empty.SCHEMA$;
 
     GenericRecordBuilder builder = new GenericRecordBuilder(schema);
     Record record1 = builder.build();
@@ -92,7 +97,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testEnums() throws Exception {
-    Schema schema = getSchema("schemata/enums.avsc");
+    Schema schema = Enums.SCHEMA$;
 
     String avroJson = "{\"enum1\": \"X\", \"enum2\": {\"test.Enum2\": \"A\"}, \"enum3\": {\"null\": null}, \"enum4\": [{\"test.Enum4\": \"SAT\"}, {\"test.Enum4\": \"SUN\"}]}}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
@@ -110,7 +115,7 @@ public class TestDBObjectDecoder {
   @Test
   @SuppressWarnings("unchecked")
   public void testIds() throws Exception {
-    Schema schema = getSchema("schemata/ids.avsc");
+    Schema schema = Ids.SCHEMA$;
 
     String avroJson = "{\"id\": \"5401bf578de2a77380c5489a\", \"nested\": {\"id\": \"6401bf578de2a77380c5489a\"}}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
@@ -140,7 +145,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testMaps() throws Exception {
-    Schema schema = getSchema("schemata/maps.avsc");
+    Schema schema = Maps.SCHEMA$;
 
     GenericRecordBuilder builder = new GenericRecordBuilder(schema);
     builder.set("maps", ImmutableMap.of("key1", ImmutableMap.of("value1", 1, "value2", 2), "key2",
@@ -159,7 +164,7 @@ public class TestDBObjectDecoder {
   @Test
   @SuppressWarnings("unchecked")
   public void testNames() throws Exception {
-    Schema schema = getSchema("schemata/names.avsc");
+    Schema schema = Names.SCHEMA$;
 
     String avroJson = "{\"id\": \"5401bf578de2a77380c5489a\", \"nested\": {\"id\": \"5401bf578de2a77380c5489b\"}}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
@@ -188,7 +193,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testPrimitives() throws Exception {
-    Schema schema = getSchema("schemata/primitives.avsc");
+    Schema schema = Primitives.SCHEMA$;
 
     GenericRecordBuilder builder = new GenericRecordBuilder(schema);
     builder.set("i", 1);
@@ -218,7 +223,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testRecords() throws Exception {
-    Schema schema = getSchema("schemata/records.avsc");
+    Schema schema = Records.SCHEMA$;
 
     GenericRecordBuilder builder = new GenericRecordBuilder(schema);
     builder.set("record1",
@@ -251,7 +256,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testTypes1() throws Exception {
-    Schema schema = getSchema("schemata/types1.avsc");
+    Schema schema = Types1.SCHEMA$;
     DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
     String mongoString = JSON.serialize(mongoObject);
 
@@ -305,7 +310,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testTypes2() throws Exception {
-    Schema schema = getSchema("schemata/types2.avsc");
+    Schema schema = Types2.SCHEMA$;
     DBObject mongoObject = new BasicDBObject(ImmutableMap.of("x", 1.0, "y", 1.0));
     String mongoString = JSON.serialize(mongoObject);
 
@@ -359,7 +364,7 @@ public class TestDBObjectDecoder {
 
   @Test
   public void testUnions() throws Exception {
-    Schema schema = getSchema("schemata/unions.avsc");
+    Schema schema = Unions.SCHEMA$;
 
     String avroJson = "{\"union1\": {\"int\": 1}, \"union2\": {\"test.Union2\": {\"union21\": {\"long\": 2}}}, \"union3\": {\"array\": [{\"boolean\": true}, {\"boolean\": false}, {\"null\": null}]}, \"union4\": {\"map\": {\"a\": {\"string\": \"A\"}, \"b\": {\"string\": \"B\"}, \"c\": {\"string\": \"C\"}}}, \"union5\": {\"null\": null}, \"union6\": {\"null\": null}}";
     Decoder decoder = DecoderFactory.get().jsonDecoder(schema, avroJson);
@@ -372,10 +377,5 @@ public class TestDBObjectDecoder {
 
     assertThat(record2).isEqualTo(record1);
     assertThat(AvroHelper.toJson(schema, record2)).isEqualTo(AvroHelper.toJson(schema, record1));
-  }
-
-  private Schema getSchema(String name) throws IOException {
-    InputStream schemaStream = getClass().getClassLoader().getResourceAsStream(name);
-    return new Schema.Parser().parse(schemaStream);
   }
 }
