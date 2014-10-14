@@ -116,7 +116,7 @@ public class JsonIpcController extends Controller {
   private static Object getRequest(Responder responder, Message message, byte[] data)
       throws IOException {
     Schema schema = message.getRequest();
-    if (schema.getType() == Type.RECORD && schema.getFields().isEmpty()) {
+    if (ArrayUtils.isEmpty(data)) {
       // The method takes no argument; use empty data.
       data = "{}".getBytes(UTF8);
     }
