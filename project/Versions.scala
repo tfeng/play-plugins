@@ -12,9 +12,11 @@ object Versions {
 
   val junit = "4.11"
 
+  val kafka = "0.8.1.1"
+
   val mockito = "1.9.5"
 
-  val mongoDb = "2.12.3"
+  val mongoDb = "2.12.4"
 
   val spring = "4.0.3.RELEASE"
 

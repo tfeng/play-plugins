@@ -5,7 +5,7 @@ name := "parent"
 Settings.common ++ Settings.disablePublishing
 
 lazy val parent =
-    project in file(".") aggregate(spring, springTest, security, http, dust, avro, avroD2, oauth2, mongodb)
+    project in file(".") aggregate(spring, springTest, security, http, dust, avro, avroD2, oauth2, mongodb, kafka)
 
 lazy val spring =
     project in file("spring-plugin") enablePlugins(PlayJava)
@@ -33,3 +33,6 @@ lazy val oauth2 =
 
 lazy val mongodb =
     project in file("mongodb-plugin") enablePlugins(PlayJava) dependsOn(avro)
+
+lazy val kafka =
+    project in file("kafka-plugin") enablePlugins(PlayJava) dependsOn(avro)
