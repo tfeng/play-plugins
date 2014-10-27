@@ -18,21 +18,12 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.plugins;
-
-import play.Application;
-import play.Play;
+package me.tfeng.play.spring;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class MongoDbPlugin extends AbstractPlugin {
+public interface ShutdownHandler {
 
-  public static MongoDbPlugin getInstance() {
-    return Play.application().plugin(MongoDbPlugin.class);
-  }
-
-  public MongoDbPlugin(Application application) {
-    super(application);
-  }
+  public void onShutdown();
 }

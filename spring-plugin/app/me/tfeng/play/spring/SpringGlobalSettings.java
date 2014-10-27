@@ -53,11 +53,13 @@ public class SpringGlobalSettings extends GlobalSettings {
 
   @Override
   public void onStart(Application application) {
-    ConfigurableApplicationContext applicationContext =
-        application.plugin(SpringPlugin.class).getApplicationContext();
     AutowiredAnnotationBeanPostProcessor beanPostProcessor =
         new AutowiredAnnotationBeanPostProcessor();
-    beanPostProcessor.setBeanFactory(applicationContext.getBeanFactory());
+    beanPostProcessor.setBeanFactory(getApplicationContext(application).getBeanFactory());
     beanPostProcessor.processInjection(this);
+  }
+
+  protected ConfigurableApplicationContext getApplicationContext(Application application) {
+    return application.plugin(SpringPlugin.class).getApplicationContext();
   }
 }

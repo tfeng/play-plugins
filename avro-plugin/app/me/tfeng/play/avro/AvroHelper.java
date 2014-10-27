@@ -31,6 +31,8 @@ import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.IndexedRecord;
+import org.apache.avro.io.BinaryDecoder;
+import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.io.JsonEncoder;
@@ -77,6 +79,27 @@ public class AvroHelper {
     JsonNode node = Json.parse(json);
     node = convertToSimpleRecord(schema, node);
     return node.toString();
+  }
+
+  public static <T> T decodeRecord(Class<T> recordClass, byte[] data) throws IOException {
+    DecoderFactory decoderFactory = DecoderFactory.get();
+    BinaryDecoder binaryDecoder = decoderFactory.binaryDecoder(data, null);
+    SpecificDatumReader<T> datumReader = new SpecificDatumReader<T>(getSchema(recordClass));
+    return datumReader.read(null, binaryDecoder);
+  }
+
+  public static byte[] encodeRecord(IndexedRecord record) throws IOException {
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    try {
+      EncoderFactory encoderFactory = EncoderFactory.get();
+      BinaryEncoder binaryEncoder = encoderFactory.binaryEncoder(stream, null);
+      SpecificDatumWriter<IndexedRecord> datumWriter = new SpecificDatumWriter<>(record.getSchema());
+      datumWriter.write(record, binaryEncoder);
+      binaryEncoder.flush();
+    } finally {
+      stream.close();
+    }
+    return stream.toByteArray();
   }
 
   public static Protocol getProtocol(Class<?> interfaceClass) {
