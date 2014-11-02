@@ -20,25 +20,32 @@
 
 package me.tfeng.play.kafka;
 
-import java.nio.charset.Charset;
+import java.io.IOException;
 
-import org.I0Itec.zkclient.exception.ZkMarshallingError;
-import org.I0Itec.zkclient.serialize.ZkSerializer;
+import kafka.serializer.Encoder;
+import kafka.utils.VerifiableProperties;
+import me.tfeng.play.avro.AvroHelper;
+
+import org.apache.avro.generic.IndexedRecord;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class ZkStringSerializer implements ZkSerializer {
+public class AvroEncoder<T extends IndexedRecord> implements Encoder<T> {
 
-  private static final Charset UTF8 = Charset.forName("UTF-8");
+  public AvroEncoder() {
+    this(null);
+  }
 
-  @Override
-  public Object deserialize(byte[] bytes) throws ZkMarshallingError {
-    return new String(bytes, UTF8);
+  public AvroEncoder(VerifiableProperties verifiableProperties) {
   }
 
   @Override
-  public byte[] serialize(Object data) throws ZkMarshallingError {
-    return ((String) data).getBytes(UTF8);
+  public byte[] toBytes(T record) {
+    try {
+      return AvroHelper.encodeRecord(record);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to encode Kafka event " + record);
+    }
   }
 }

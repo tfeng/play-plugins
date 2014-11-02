@@ -20,25 +20,47 @@
 
 package me.tfeng.play.kafka;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 
-import org.I0Itec.zkclient.exception.ZkMarshallingError;
-import org.I0Itec.zkclient.serialize.ZkSerializer;
+import kafka.serializer.Decoder;
+import kafka.utils.VerifiableProperties;
+import me.tfeng.play.avro.AvroHelper;
+
+import org.apache.avro.generic.IndexedRecord;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class ZkStringSerializer implements ZkSerializer {
+public class AvroDecoder<T extends IndexedRecord> implements Decoder<T> {
+
+  private Class<? extends T> recordClass;
 
   private static final Charset UTF8 = Charset.forName("UTF-8");
 
-  @Override
-  public Object deserialize(byte[] bytes) throws ZkMarshallingError {
-    return new String(bytes, UTF8);
+  public AvroDecoder() {
+    this((VerifiableProperties) null);
+  }
+
+  public AvroDecoder(Class<T> recordClass) {
+    this((VerifiableProperties) null);
+    this.recordClass = recordClass;
+  }
+
+  public AvroDecoder(VerifiableProperties verifiableProperties) {
   }
 
   @Override
-  public byte[] serialize(Object data) throws ZkMarshallingError {
-    return ((String) data).getBytes(UTF8);
+  public T fromBytes(byte[] data) {
+    try {
+      return AvroHelper.decodeRecord(recordClass, data);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to decode Kafka event " + new String(data, UTF8));
+    }
+  }
+
+  public AvroDecoder<T> setRecordClass(Class<? extends T> recordClass) {
+    this.recordClass = recordClass;
+    return this;
   }
 }
