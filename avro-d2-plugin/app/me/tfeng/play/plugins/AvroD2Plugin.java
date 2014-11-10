@@ -34,11 +34,13 @@ import java.util.concurrent.TimeUnit;
 
 import me.tfeng.play.avro.AvroHelper;
 import me.tfeng.play.avro.d2.AvroD2Client;
+import me.tfeng.play.avro.d2.AvroD2Helper;
 import me.tfeng.play.avro.d2.AvroD2Server;
 import me.tfeng.play.http.PostRequestPreparer;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.specific.SpecificData;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
@@ -139,6 +141,18 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     return zk;
   }
 
+  public boolean isRegistered(Class<?> interfaceClass) {
+    if (zk == null) {
+      return false;
+    }
+    String path = AvroD2Helper.getZkPath(AvroHelper.getProtocol(interfaceClass));
+    try {
+      return !zk.getChildren(path, this).isEmpty();
+    } catch (KeeperException | InterruptedException e) {
+      return false;
+    }
+  }
+
   @Override
   @SuppressWarnings("unchecked")
   public void onStart() {
@@ -181,7 +195,7 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     }
   }
 
-  public void startServers() {
+  private void startServers() {
     servers = new ArrayList<>(protocolPaths.size());
     for (Entry<Class<?>, String> entry : protocolPaths.entrySet()) {
       Protocol protocol = AvroHelper.getProtocol(entry.getKey());
@@ -198,9 +212,10 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
       AvroD2Server server = new AvroD2Server(protocol, url);
       servers.add(server);
     }
+    StartablePlugin.getInstance().addStartables(servers);
   }
 
-  public void stopServers() {
+  private void stopServers() {
     servers.stream().forEach(server -> {
       try {
         server.close();

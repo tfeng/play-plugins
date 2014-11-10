@@ -20,13 +20,16 @@
 
 package me.tfeng.play.plugins;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.stream.Collectors;
 
+import me.tfeng.play.spring.ExtendedStartable;
 import me.tfeng.play.spring.Startable;
 import me.tfeng.play.utils.DependencyUtils;
 
@@ -50,8 +53,18 @@ public class StartablePlugin extends AbstractPlugin {
     return Play.application().plugin(StartablePlugin.class);
   }
 
+  private Set<Startable> startables = new HashSet<>();
+
   public StartablePlugin(Application application) {
     super(application);
+  }
+
+  public void addStartable(Startable startable) {
+    startables.add(startable);
+  }
+
+  public void addStartables(Collection<? extends Startable> startables) {
+    this.startables.addAll(startables);
   }
 
   public List<Startable> getStartables() {
@@ -77,7 +90,15 @@ public class StartablePlugin extends AbstractPlugin {
         getApplicationContext().getBeansOfType(Startable.class).entrySet();
     List<Entry<String, Startable>> sortedEntries =
         DependencyUtils.dependencySort(entries, beanDependencyComparator);
-    return sortedEntries.stream().map(entry -> entry.getValue()).collect(Collectors.toList());
+    List<Startable> result = new ArrayList<>(startables.size() + sortedEntries.size());
+    result.addAll(startables);
+    for (Entry<String, Startable> entry : sortedEntries) {
+      Startable startable = entry.getValue();
+      if (!startables.contains(startable)) {
+        result.add(startable);
+      }
+    }
+    return result;
   }
 
   @Override
@@ -85,11 +106,32 @@ public class StartablePlugin extends AbstractPlugin {
     super.onStart();
 
     List<Startable> startables = getStartables();
+
+    for (Startable startable: startables) {
+      if (startable instanceof ExtendedStartable) {
+        try {
+          ((ExtendedStartable) startable).beforeStart();
+        } catch (Throwable t) {
+          onStartFailure(startable, t);
+        }
+      }
+    }
+
     for (Startable startable: startables) {
       try {
         startable.onStart();
       } catch (Throwable t) {
         onStartFailure(startable, t);
+      }
+    }
+
+    for (Startable startable: startables) {
+      if (startable instanceof ExtendedStartable) {
+        try {
+          ((ExtendedStartable) startable).afterStart();
+        } catch (Throwable t) {
+          onStartFailure(startable, t);
+        }
       }
     }
   }
@@ -101,6 +143,19 @@ public class StartablePlugin extends AbstractPlugin {
   @Override
   public void onStop() {
     List<Startable> startables = getStartables();
+
+    for (ListIterator<Startable> iterator = startables.listIterator(startables.size());
+        iterator.hasPrevious();) {
+      Startable startable = iterator.previous();
+      if (startable instanceof ExtendedStartable) {
+        try {
+          ((ExtendedStartable) startable).beforeStop();
+        } catch (Throwable t) {
+          onStartFailure(startable, t);
+        }
+      }
+    }
+
     for (ListIterator<Startable> iterator = startables.listIterator(startables.size());
         iterator.hasPrevious();) {
       Startable startable = iterator.previous();
@@ -108,6 +163,18 @@ public class StartablePlugin extends AbstractPlugin {
         startable.onStop();
       } catch (Throwable t) {
         onStopFailure(startable, t);
+      }
+    }
+
+    for (ListIterator<Startable> iterator = startables.listIterator(startables.size());
+        iterator.hasPrevious();) {
+      Startable startable = iterator.previous();
+      if (startable instanceof ExtendedStartable) {
+        try {
+          ((ExtendedStartable) startable).afterStop();
+        } catch (Throwable t) {
+          onStartFailure(startable, t);
+        }
       }
     }
 

@@ -24,6 +24,7 @@ import java.net.URL;
 import java.util.concurrent.TimeUnit;
 
 import me.tfeng.play.plugins.AvroD2Plugin;
+import me.tfeng.play.spring.ExtendedStartable;
 
 import org.apache.avro.Protocol;
 import org.apache.zookeeper.KeeperException;
@@ -40,7 +41,7 @@ import play.Logger.ALogger;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroD2Server implements Watcher {
+public class AvroD2Server implements ExtendedStartable, Watcher {
 
   private static final ALogger LOG = Logger.of(AvroD2Server.class);
 
@@ -51,7 +52,24 @@ public class AvroD2Server implements Watcher {
   public AvroD2Server(Protocol protocol, URL url) {
     this.protocol = protocol;
     this.url = url;
+  }
+
+  @Override
+  public void afterStart() throws Throwable {
     register();
+  }
+
+  @Override
+  public void afterStop() throws Throwable {
+  }
+
+  @Override
+  public void beforeStart() throws Throwable {
+  }
+
+  @Override
+  public void beforeStop() throws Throwable {
+    close();
   }
 
   public synchronized void close() throws InterruptedException, KeeperException {
@@ -73,6 +91,14 @@ public class AvroD2Server implements Watcher {
 
   public URL getUrl() {
     return url;
+  }
+
+  @Override
+  public void onStart() throws Throwable {
+  }
+
+  @Override
+  public void onStop() throws Throwable {
   }
 
   @Override
