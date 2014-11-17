@@ -418,47 +418,50 @@ public class DBObjectDecoder extends Decoder {
     }
   }
 
-  private boolean jumpToNextField() throws IOException {
+  private void jumpToNextField() throws IOException {
     Schema schema = schemaStack.peek();
     switch (schema.getType()) {
-    case ARRAY:
-      pushToStacks(schemaStack.peek().getElementType(), iteratorStack.peek().next());
-      return true;
+    case ARRAY: {
+      Schema element = schemaStack.peek().getElementType();
+      Type type = element.getType();
+      pushToStacks(element, iteratorStack.peek().next());
+      if (type == Type.RECORD) {
+        jumpToNextField();
+      }
+      break;
+    }
     case MAP: {
       MapIterator iterator = (MapIterator) iteratorStack.peek();
       if (iterator.isNextKey()) {
         pushToStacks(STRING_SCHEMA, iteratorStack.peek().next());
       } else {
-        pushToStacks(schemaStack.peek().getValueType(), iteratorStack.peek().next());
+        Schema value = schemaStack.peek().getValueType();
+        Type type = value.getType();
+        pushToStacks(value, iteratorStack.peek().next());
+        if (type == Type.RECORD) {
+          jumpToNextField();
+        }
       }
-      return true;
+      break;
     }
     case RECORD: {
       RecordIterator iterator = (RecordIterator) iteratorStack.peek();
-      boolean reachedNextField = false;
-      while (!reachedNextField && iterator.hasNext()) {
+      if (iterator.hasNext()) {
         Object value = iterator.next();
         Field field = iterator.getCurrentField();
         Type type = field.schema().getType();
         pushToStacks(field.schema(), value);
         if (type == Type.RECORD) {
-          reachedNextField = jumpToNextField();
-          if (!reachedNextField) {
-            popFromStacks();
-          }
-        } else {
-          reachedNextField = true;
+          jumpToNextField();
         }
-      }
-      if (reachedNextField) {
-        return true;
       } else {
         popFromStacks();
-        return jumpToNextField();
+        jumpToNextField();
       }
+      break;
     }
     default:
-      return true;
+      break;
     }
   }
 

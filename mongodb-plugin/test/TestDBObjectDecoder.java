@@ -40,6 +40,7 @@ import org.junit.Test;
 
 import play.libs.Json;
 import test.Arrays;
+import test.ArraysOfRecords;
 import test.Empty;
 import test.Enums;
 import test.Ids;
@@ -78,6 +79,17 @@ public class TestDBObjectDecoder {
 
     assertThat(record2).isEqualTo(record1);
     assertThat(AvroHelper.toJson(schema, record2)).isEqualTo(AvroHelper.toJson(schema, record1));
+  }
+
+  @Test
+  public void testArraysOfRecords() throws Exception {
+    Schema schema = ArraysOfRecords.SCHEMA$;
+
+    String json = "{\"array\":[{\"e\":\"A\",\"i\":1,\"l\":2}]}";
+    DBObject object = (DBObject) JSON.parse(json);
+    Record record = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
+
+    assertThat(AvroHelper.toJson(schema, record)).isEqualTo(json);
   }
 
   @Test
