@@ -422,10 +422,16 @@ public class DBObjectDecoder extends Decoder {
     Schema schema = schemaStack.peek();
     switch (schema.getType()) {
     case ARRAY: {
+      Iterator<Object> iterator = iteratorStack.peek();
       Schema element = schemaStack.peek().getElementType();
       Type type = element.getType();
-      pushToStacks(element, iteratorStack.peek().next());
-      if (type == Type.RECORD) {
+      if (iterator.hasNext()) {
+        pushToStacks(element, iterator.next());
+        if (type == Type.RECORD) {
+          jumpToNextField();
+        }
+      } else {
+        popFromStacks();
         jumpToNextField();
       }
       break;

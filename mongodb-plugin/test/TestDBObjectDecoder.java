@@ -20,6 +20,7 @@
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.Map;
 
 import me.tfeng.play.avro.AvroHelper;
@@ -48,6 +49,7 @@ import test.Maps;
 import test.Names;
 import test.Primitives;
 import test.Records;
+import test.StringArray;
 import test.Types1;
 import test.Types2;
 import test.Unions;
@@ -100,6 +102,22 @@ public class TestDBObjectDecoder {
     Record record1 = builder.build();
 
     String json = "{}";
+    DBObject object = (DBObject) JSON.parse(json);
+    Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
+
+    assertThat(record2).isEqualTo(record1);
+    assertThat(AvroHelper.toJson(schema, record2)).isEqualTo(AvroHelper.toJson(schema, record1));
+  }
+
+  @Test
+  public void testEmptyArray() throws Exception {
+    Schema schema = StringArray.SCHEMA$;
+
+    GenericRecordBuilder builder = new GenericRecordBuilder(schema);
+    builder.set("array", Collections.emptyList());
+    Record record1 = builder.build();
+
+    String json = "{\"array\": []}";
     DBObject object = (DBObject) JSON.parse(json);
     Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
