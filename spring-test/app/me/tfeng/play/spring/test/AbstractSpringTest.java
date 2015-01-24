@@ -22,7 +22,6 @@ package me.tfeng.play.spring.test;
 
 import java.io.File;
 import java.io.IOException;
-import java.security.AccessController;
 
 import me.tfeng.play.spring.ApplicationContextHolder;
 
@@ -35,8 +34,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import sun.security.action.GetPropertyAction;
-
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
@@ -45,8 +42,7 @@ import sun.security.action.GetPropertyAction;
 @RunWith(SpringJUnit4ClassRunner.class)
 public abstract class AbstractSpringTest {
 
-  private static final File TEMPORARY_DIRECTORY =
-      new File(AccessController.doPrivileged(new GetPropertyAction("java.io.tmpdir")));
+  private static final File TEMPORARY_DIRECTORY = new File(System.getProperty("java.io.tmpdir"));
 
   @Autowired
   protected ConfigurableApplicationContext applicationContext;

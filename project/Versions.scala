@@ -2,7 +2,7 @@ package me.tfeng.play.plugins
 
 object Versions {
 
-  val project = "0.3.5"
+  val project = "0.3.6-SNAPSHOT"
 
   val sbtPlugins = "0.3.1"
 
@@ -14,9 +14,9 @@ object Versions {
 
   val kafka = "0.8.1.1"
 
-  val mockito = "1.9.5"
+  val mockito = "1.10.19"
 
-  val mongoDb = "2.12.4"
+  val mongoDb = "2.12.5"
 
   val spring = "4.0.8.RELEASE"
 
