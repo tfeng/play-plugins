@@ -34,7 +34,4 @@ public interface AsyncTransceiver {
 
   public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request,
       PostRequestPreparer postRequestPreparer) throws IOException;
-
-  public List<ByteBuffer> transceive(List<ByteBuffer> request,
-      PostRequestPreparer postRequestPreparer) throws IOException;
 }

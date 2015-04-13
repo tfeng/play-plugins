@@ -27,6 +27,7 @@ import java.util.List;
 
 import me.tfeng.play.http.PostRequestPreparer;
 
+import me.tfeng.play.plugins.HttpPlugin;
 import org.apache.avro.ipc.specific.SpecificRequestor;
 import org.apache.avro.specific.SpecificData;
 
@@ -91,8 +92,9 @@ public class IpcRequestor extends SpecificRequestor {
             }
           });
     } else {
+      int timeout = HttpPlugin.getInstance().getRequestTimeout();
       List<ByteBuffer> response =
-          transceiver.transceive(asyncRequest.getBytes(), postRequestPreparer);
+          transceiver.asyncTransceive(asyncRequest.getBytes(), postRequestPreparer).get(timeout);
       transceiverCallback.handleResult(response);
       if (callFuture == null) {
         return null;
