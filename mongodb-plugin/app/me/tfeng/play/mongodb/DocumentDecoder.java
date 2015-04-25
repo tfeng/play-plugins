@@ -44,7 +44,7 @@ import play.Logger.ALogger;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class DBObjectDecoder extends Decoder {
+public class DocumentDecoder extends Decoder {
 
   private class MapIterator implements Iterator<Object> {
 
@@ -133,7 +133,7 @@ public class DBObjectDecoder extends Decoder {
     }
   }
 
-  private static final ALogger LOG = Logger.of(DBObjectDecoder.class);
+  private static final ALogger LOG = Logger.of(DocumentDecoder.class);
 
   private static final Schema STRING_SCHEMA = Schema.create(Type.STRING);
 
@@ -143,7 +143,7 @@ public class DBObjectDecoder extends Decoder {
 
   private final Stack<Schema> schemaStack = new Stack<>();
 
-  public DBObjectDecoder(Class<?> recordClass, Object object) {
+  public DocumentDecoder(Class<?> recordClass, Object object) {
     try {
       data = new SpecificData(recordClass.getClassLoader());
       pushToStacks(data.getSchema(recordClass), object);
@@ -152,7 +152,7 @@ public class DBObjectDecoder extends Decoder {
     }
   }
 
-  public DBObjectDecoder(Schema schema, Object object, ClassLoader classLoader) {
+  public DocumentDecoder(Schema schema, Object object, ClassLoader classLoader) {
     try {
       data = new SpecificData(classLoader);
       pushToStacks(schema, object);

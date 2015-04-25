@@ -36,11 +36,10 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.avro.io.Decoder;
 import org.apache.avro.specific.SpecificDatumReader;
+import org.bson.BSONObject;
+import org.bson.Document;
 import org.bson.types.Binary;
 import org.mortbay.util.ajax.JSON;
-
-import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -53,33 +52,50 @@ public class RecordConverter {
 
   public static final String MONGO_TYPE_PROPERTY = "mongo-type";
 
-  public static DBObject toDbObject(IndexedRecord record) {
-    DBObject dbObject = new BasicDBObject();
+  public static Document toDocument(IndexedRecord record) {
+    Document document = new Document();
     Schema schema = record.getSchema();
     for (Field field : schema.getFields()) {
       Object value = record.get(field.pos());
       if (value != null) {
-        dbObject.put(getFieldName(field), getDbObject(field.schema(), value));
+        document.put(getFieldName(field), getDocument(field.schema(), value));
       }
     }
-    return dbObject;
+    return document;
   }
 
-  public static <T extends IndexedRecord> T toRecord(Class<T> recordClass, DBObject dbObject) {
+  public static <T extends IndexedRecord> T toRecord(Class<T> recordClass, BSONObject object) {
     SpecificDatumReader<T> reader = new SpecificDatumReader<T>(recordClass);
     try {
-      Decoder decoder = new DBObjectDecoder(recordClass, dbObject);
+      Decoder decoder = new DocumentDecoder(recordClass, object);
       return reader.read(null, decoder);
     } catch (IOException e) {
-      throw new RuntimeException("Unable to convert MongoDB object " + dbObject
+      throw new RuntimeException("Unable to convert MongoDB object " + object
           + " into Avro record", e);
     }
   }
 
-  public static Record toRecord(Schema schema, DBObject object, ClassLoader classLoader)
+  public static <T extends IndexedRecord> T toRecord(Class<T> recordClass, Document document) {
+    SpecificDatumReader<T> reader = new SpecificDatumReader<T>(recordClass);
+    try {
+      Decoder decoder = new DocumentDecoder(recordClass, document);
+      return reader.read(null, decoder);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to convert MongoDB document " + document
+          + " into Avro record", e);
+    }
+  }
+
+  public static Record toRecord(Schema schema, BSONObject object, ClassLoader classLoader)
       throws IOException {
     GenericDatumReader<Record> reader = new GenericDatumReader<>(schema);
-    return reader.read(null, new DBObjectDecoder(schema, object, classLoader));
+    return reader.read(null, new DocumentDecoder(schema, object, classLoader));
+  }
+
+  public static Record toRecord(Schema schema, Document document, ClassLoader classLoader)
+      throws IOException {
+    GenericDatumReader<Record> reader = new GenericDatumReader<>(schema);
+    return reader.read(null, new DocumentDecoder(schema, document, classLoader));
   }
 
   protected static String getFieldName(Field field) {
@@ -92,7 +108,7 @@ public class RecordConverter {
   }
 
   @SuppressWarnings("unchecked")
-  private static Object getDbObject(Schema schema, Object object) {
+  private static Object getDocument(Schema schema, Object object) {
     if (schema.getType() == Type.UNION) {
       List<Schema> types = schema.getTypes();
       if (types.size() != 2
@@ -103,18 +119,18 @@ public class RecordConverter {
                 + schema);
       }
       if (types.get(0).getType() == Type.NULL) {
-        return getDbObject(types.get(1), object);
+        return getDocument(types.get(1), object);
       } else {
-        return getDbObject(types.get(0), object);
+        return getDocument(types.get(0), object);
       }
     } else if (object == null) {
       return null;
     } else if (object instanceof IndexedRecord) {
-      return toDbObject((IndexedRecord) object);
+      return toDocument((IndexedRecord) object);
     } else if (object instanceof Collection) {
-      return getDbObjects(schema, (Collection<Object>) object);
+      return getDocuments(schema, (Collection<Object>) object);
     } else if (object instanceof Map) {
-      return getDbObjects(schema, (Map<String, Object>) object);
+      return getDocuments(schema, (Map<String, Object>) object);
     } else if (object instanceof ByteBuffer) {
       return new Binary(((ByteBuffer) object).array());
     } else if (object.getClass().isEnum()) {
@@ -150,15 +166,15 @@ public class RecordConverter {
     }
   }
 
-  private static List<Object> getDbObjects(Schema schema, Collection<Object> collection) {
-    return collection.stream().map(object -> getDbObject(schema.getElementType(), object))
+  private static List<Object> getDocuments(Schema schema, Collection<Object> collection) {
+    return collection.stream().map(object -> getDocument(schema.getElementType(), object))
         .collect(Collectors.toList());
   }
 
-  private static Map<String, Object> getDbObjects(Schema schema, Map<String, Object> map) {
+  private static Map<String, Object> getDocuments(Schema schema, Map<String, Object> map) {
     Map<String, Object> newMap = new HashMap<>(map.size());
     map.entrySet().forEach(
-        entry -> newMap.put(entry.getKey(), getDbObject(schema.getValueType(), entry.getValue())));
+        entry -> newMap.put(entry.getKey(), getDocument(schema.getValueType(), entry.getValue())));
     return newMap;
   }
 }

@@ -24,17 +24,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import me.tfeng.play.spring.Startable;
 
+import org.bson.Document;
 import org.bson.types.BSONTimestamp;
 
 import play.Logger;
 import play.Logger.ALogger;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.Bytes;
-import com.mongodb.DBCollection;
-import com.mongodb.DBCursor;
-import com.mongodb.DBObject;
+import com.mongodb.CursorType;
 import com.mongodb.MongoClient;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -45,7 +44,7 @@ public class OplogListener implements Startable {
 
     @Override
     public void run() {
-      DBObject object;
+      Document object;
       do {
         try {
           object = cursor.next();
@@ -78,9 +77,9 @@ public class OplogListener implements Startable {
 
   private static final AtomicBoolean stopping = new AtomicBoolean(false);
 
-  private DBCollection collection;
+  private MongoCollection<Document> collection;
 
-  private DBCursor cursor;
+  private MongoCursor<Document> cursor;
 
   private OplogItemHandler handler;
 
@@ -99,8 +98,8 @@ public class OplogListener implements Startable {
     }
 
     LOG.info("Connecting to " + DB_NAME + "." + COLLECTION_NAME + " in MongoDB");
-    collection = mongoClient.getDB(DB_NAME).getCollection(COLLECTION_NAME);
-    cursor = collection.find(getQuery()).sort(getSort()).setOptions(getOptions());
+    collection = mongoClient.getDatabase(DB_NAME).getCollection(COLLECTION_NAME);
+    cursor = collection.find(getQuery()).sort(getSort()).cursorType(getCursorType()).iterator();
 
     stopping.set(false);
 
@@ -133,14 +132,14 @@ public class OplogListener implements Startable {
     this.startTimestamp = startTimestamp;
   }
 
-  protected int getOptions() {
-    return Bytes.QUERYOPTION_TAILABLE;
+  protected CursorType getCursorType() {
+    return CursorType.TailableAwait;
   }
 
-  protected DBObject getQuery() {
-    DBObject query = new BasicDBObject();
+  protected Document getQuery() {
+    Document query = new Document();
     if (startTimestamp != null) {
-      query.put("ts", new BasicDBObject("$gt", startTimestamp));
+      query.put("ts", new Document("$gt", startTimestamp));
     }
     if (namespace != null) {
       query.put("ns", namespace);
@@ -148,7 +147,7 @@ public class OplogListener implements Startable {
     return query;
   }
 
-  protected DBObject getSort() {
-    return new BasicDBObject("$natural", 1);
+  protected Document getSort() {
+    return new Document("$natural", 1);
   }
 }

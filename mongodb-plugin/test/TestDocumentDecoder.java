@@ -34,6 +34,8 @@ import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.avro.io.Decoder;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.specific.SpecificDatumReader;
+import org.bson.BSONObject;
+import org.bson.Document;
 import org.bson.types.BSONTimestamp;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
@@ -63,7 +65,7 @@ import com.mongodb.util.JSON;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class TestDBObjectDecoder {
+public class TestDocumentDecoder {
 
   @Test
   public void testArrays() throws Exception {
@@ -76,7 +78,7 @@ public class TestDBObjectDecoder {
     Record record1 = builder.build();
 
     String json = "{\"arrays\": [[[1, 2, 3], []], [[4], []], [[]]]}";
-    DBObject object = (DBObject) JSON.parse(json);
+    BSONObject object = (BSONObject) JSON.parse(json);
     Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     assertThat(record2).isEqualTo(record1);
@@ -102,7 +104,7 @@ public class TestDBObjectDecoder {
     Record record1 = builder.build();
 
     String json = "{}";
-    DBObject object = (DBObject) JSON.parse(json);
+    BSONObject object = (BSONObject) JSON.parse(json);
     Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     assertThat(record2).isEqualTo(record1);
@@ -118,7 +120,7 @@ public class TestDBObjectDecoder {
     Record record1 = builder.build();
 
     String json = "{\"array\": []}";
-    DBObject object = (DBObject) JSON.parse(json);
+    BSONObject object = (BSONObject) JSON.parse(json);
     Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     assertThat(record2).isEqualTo(record1);
@@ -135,7 +137,7 @@ public class TestDBObjectDecoder {
     Record record1 = reader.read(null, decoder);
 
     String mongoJson = "{\"enum1\": \"X\", \"enum2\": \"A\", \"enum3\": null, \"enum4\": [\"SAT\", \"SUN\"]}}";
-    DBObject object = (DBObject) JSON.parse(mongoJson);
+    BSONObject object = (BSONObject) JSON.parse(mongoJson);
     Record record2 = RecordConverter.toRecord(schema, object, getClass().getClassLoader());
 
     assertThat(record2).isEqualTo(record1);
@@ -152,7 +154,7 @@ public class TestDBObjectDecoder {
     SpecificDatumReader<Ids> reader = new SpecificDatumReader<Ids>(schema);
     Ids ids1 = reader.read(null, decoder);
 
-    DBObject object = new BasicDBObject();
+    Document object = new Document();
     object.put("_id", new ObjectId("5401bf578de2a77380c5489a"));
     object.put("nested", new BasicDBObject("_id", new ObjectId("6401bf578de2a77380c5489a")));
     Ids ids2 = RecordConverter.toRecord(Ids.class, object);
@@ -162,8 +164,8 @@ public class TestDBObjectDecoder {
     assertThat(ids1.getNested().getId().toString()).isEqualTo("6401bf578de2a77380c5489a");
     assertThat(ids2.getNested().getId().toString()).isEqualTo("6401bf578de2a77380c5489a");
 
-    DBObject object1 = RecordConverter.toDbObject(ids1);
-    DBObject object2 = RecordConverter.toDbObject(ids2);
+    Document object1 = RecordConverter.toDocument(ids1);
+    Document object2 = RecordConverter.toDocument(ids2);
 
     assertThat(object1.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
     assertThat(object2.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
@@ -202,7 +204,7 @@ public class TestDBObjectDecoder {
     Names names1 = reader.read(null, decoder);
 
     String mongoJson = "{\"_id\": \"5401bf578de2a77380c5489a\", \"nested\": {\"_id\": \"5401bf578de2a77380c5489b\"}}";
-    DBObject object = (DBObject) JSON.parse(mongoJson);
+    BSONObject object = (BSONObject) JSON.parse(mongoJson);
     Names names2 = RecordConverter.toRecord(Names.class, object);
 
     assertThat(names1.getId().toString()).isEqualTo("5401bf578de2a77380c5489a");
@@ -210,8 +212,8 @@ public class TestDBObjectDecoder {
     assertThat(names1.getNested().getId().toString()).isEqualTo("5401bf578de2a77380c5489b");
     assertThat(names2.getNested().getId().toString()).isEqualTo("5401bf578de2a77380c5489b");
 
-    DBObject object1 = RecordConverter.toDbObject(names1);
-    DBObject object2 = RecordConverter.toDbObject(names2);
+    Document object1 = RecordConverter.toDocument(names1);
+    Document object2 = RecordConverter.toDocument(names2);
 
     assertThat(object1.get("_id")).isEqualTo("5401bf578de2a77380c5489a");
     assertThat(object2.get("_id")).isEqualTo("5401bf578de2a77380c5489a");
@@ -295,7 +297,7 @@ public class TestDBObjectDecoder {
     SpecificDatumReader<Types1> reader = new SpecificDatumReader<Types1>(schema);
     Types1 types1 = reader.read(null, decoder);
 
-    DBObject object = new BasicDBObject();
+    BasicDBObject object = new BasicDBObject();
     object.put("_id", new ObjectId("5401bf578de2a77380c5489a"));
     object.put("bsonTimestamp1", new BSONTimestamp(1409385948, 1));
     object.put("bsonTimestamp2", new BSONTimestamp(1409385948, 1));
@@ -317,8 +319,8 @@ public class TestDBObjectDecoder {
     assertThat(types1.getMongoString().toString()).isEqualTo(mongoString);
     assertThat(types2.getMongoString().toString()).isEqualTo(mongoString);
 
-    DBObject object1 = RecordConverter.toDbObject(types1);
-    DBObject object2 = RecordConverter.toDbObject(types2);
+    Document object1 = RecordConverter.toDocument(types1);
+    Document object2 = RecordConverter.toDocument(types2);
 
     assertThat(object1.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
     assertThat(object2.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
@@ -349,7 +351,7 @@ public class TestDBObjectDecoder {
     SpecificDatumReader<Types2> reader = new SpecificDatumReader<Types2>(schema);
     Types2 types1 = reader.read(null, decoder);
 
-    DBObject object = new BasicDBObject();
+    BasicDBObject object = new BasicDBObject();
     object.put("_id", new ObjectId("5401bf578de2a77380c5489a"));
     object.put("bsonTimestamp1", new BSONTimestamp(1409385948, 1));
     object.put("bsonTimestamp2", new BSONTimestamp(1409385948, 1));
@@ -371,8 +373,8 @@ public class TestDBObjectDecoder {
     assertThat(types1.getMongoString().toString()).isEqualTo(mongoString);
     assertThat(types2.getMongoString().toString()).isEqualTo(mongoString);
 
-    DBObject object1 = RecordConverter.toDbObject(types1);
-    DBObject object2 = RecordConverter.toDbObject(types2);
+    Document object1 = RecordConverter.toDocument(types1);
+    Document object2 = RecordConverter.toDocument(types2);
 
     assertThat(object1.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
     assertThat(object2.get("_id")).isEqualTo(new ObjectId("5401bf578de2a77380c5489a"));
