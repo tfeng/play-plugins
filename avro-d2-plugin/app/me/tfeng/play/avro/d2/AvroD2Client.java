@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.ipc.IpcRequestor;
+import org.apache.avro.ipc.PostRequestPreparerChain;
 import org.apache.avro.specific.SpecificData;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -50,8 +51,10 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   private final SpecificData data;
   private final Class<?> interfaceClass;
+  private boolean isVersionRegistered;
   private volatile int lastIndex = -1;
-  private volatile PostRequestPreparer postRequestPreparer;
+  private volatile PostRequestPreparerChain postRequestPreparerChain =
+      new PostRequestPreparerChain();
   private final Protocol protocol;
   private volatile IpcRequestor requestor;
   private final List<URL> serverUrls = new ArrayList<>();
@@ -64,6 +67,13 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     this.interfaceClass = interfaceClass;
     this.data = data;
     protocol = AvroHelper.getProtocol(interfaceClass);
+  }
+
+  public void addPostRequestPreparer(PostRequestPreparer postRequestPreparer) {
+    postRequestPreparerChain.add(postRequestPreparer);
+    if (requestor != null) {
+      requestor.addPostRequestPreparer(postRequestPreparer);
+    }
   }
 
   public URL getNextServerUrl() {
@@ -86,9 +96,11 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     if (requestor == null) {
       refresh();
       requestor = new IpcRequestor(interfaceClass, new AvroD2Transceiver(this), data);
-      if (postRequestPreparer != null) {
-        requestor.setPostRequestPreparer(postRequestPreparer);
-      }
+      requestor.addPostRequestPreparer(postRequestPreparerChain);
+    }
+    if (!isVersionRegistered) {
+      AvroD2Helper.createVersionNode(AvroD2Plugin.getInstance().getZooKeeper(), protocol);
+      isVersionRegistered = true;
     }
     return requestor.invoke(proxy, method, args);
   }
@@ -137,10 +149,10 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     }
   }
 
-  public void setPostRequestPreparer(PostRequestPreparer postRequestPreparer) {
-    this.postRequestPreparer = postRequestPreparer;
+  public void removePostRequestPreparer(PostRequestPreparer postRequestPreparer) {
+    postRequestPreparerChain.remove(postRequestPreparer);
     if (requestor != null) {
-      requestor.setPostRequestPreparer(postRequestPreparer);
+      requestor.removePostRequestPreparer(postRequestPreparer);
     }
   }
 

@@ -23,10 +23,9 @@ package me.tfeng.play.plugins;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
-
-import me.tfeng.play.http.PostRequestPreparer;
 
 import org.apache.avro.ipc.AsyncHttpTransceiver;
 import org.apache.avro.ipc.AsyncTransceiver;
@@ -35,6 +34,7 @@ import org.apache.avro.specific.SpecificData;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Value;
 
+import me.tfeng.play.http.PostRequestPreparer;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
@@ -50,23 +50,18 @@ public class AvroPlugin extends AbstractPlugin {
 
   private static final ALogger LOG = Logger.of(AvroPlugin.class);
 
-  public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver) {
-    return client(interfaceClass, transceiver, new SpecificData(interfaceClass.getClassLoader()));
-  }
-
   public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver,
-      SpecificData data) {
-    return client(interfaceClass, transceiver, data, null);
+      PostRequestPreparer... postRequestPreparers) {
+    return client(interfaceClass, transceiver, new SpecificData(interfaceClass.getClassLoader()),
+        postRequestPreparers);
   }
 
   @SuppressWarnings("unchecked")
   public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver,
-      SpecificData data, PostRequestPreparer postRequestPreparer) {
+      SpecificData data, PostRequestPreparer... postRequestPreparers) {
     try {
       IpcRequestor requestor = new IpcRequestor(interfaceClass, transceiver, data);
-      if (postRequestPreparer != null) {
-        requestor.setPostRequestPreparer(postRequestPreparer);
-      }
+      Arrays.stream(postRequestPreparers).forEach(requestor::addPostRequestPreparer);
       return (T) Proxy.newProxyInstance(data.getClassLoader(), new Class[] { interfaceClass },
           requestor);
     } catch (IOException e) {
@@ -74,28 +69,14 @@ public class AvroPlugin extends AbstractPlugin {
     }
   }
 
-  public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver,
-      PostRequestPreparer postRequestPreparer) {
-    return client(interfaceClass, transceiver, new SpecificData(interfaceClass.getClassLoader()),
-        postRequestPreparer);
-  }
-
-  public static <T> T client(Class<T> interfaceClass, URL url) {
-    return client(interfaceClass, new AsyncHttpTransceiver(url));
-  }
-
-  public static <T> T client(Class<T> interfaceClass, URL url, SpecificData data) {
-    return client(interfaceClass, new AsyncHttpTransceiver(url), data);
+  public static <T> T client(Class<T> interfaceClass, URL url,
+      PostRequestPreparer... postRequestPreparers) {
+    return client(interfaceClass, new AsyncHttpTransceiver(url), postRequestPreparers);
   }
 
   public static <T> T client(Class<T> interfaceClass, URL url, SpecificData data,
-      PostRequestPreparer postRequestPreparer) {
-    return client(interfaceClass, new AsyncHttpTransceiver(url), data, postRequestPreparer);
-  }
-
-  public static <T> T client(Class<T> interfaceClass, URL url,
-      PostRequestPreparer postRequestPreparer) {
-    return client(interfaceClass, new AsyncHttpTransceiver(url), postRequestPreparer);
+      PostRequestPreparer... postRequestPreparers) {
+    return client(interfaceClass, new AsyncHttpTransceiver(url), data, postRequestPreparers);
   }
 
   public static AvroPlugin getInstance() {

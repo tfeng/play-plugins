@@ -21,28 +21,39 @@
 package org.apache.avro.ipc;
 
 import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
 
+import com.google.common.collect.Lists;
 import com.ning.http.client.AsyncHttpClient;
 
 import me.tfeng.play.http.PostRequestPreparer;
-import play.mvc.Http.Request;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AuthTokenPreservingPostRequestPreparer implements PostRequestPreparer {
+public class PostRequestPreparerChain implements PostRequestPreparer {
 
-  private Request request;
+  private final List<PostRequestPreparer> preparers = Lists.newArrayList();
 
-  public AuthTokenPreservingPostRequestPreparer(Request request) {
-    this.request = request;
+  public PostRequestPreparerChain(PostRequestPreparer... preparers) {
+    Arrays.stream(preparers).forEach(this.preparers::add);
+  }
+
+  public void add(PostRequestPreparer preparer) {
+    preparers.add(preparer);
   }
 
   @Override
   public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
-    String authorization = request.getHeader("Authorization");
-    if (authorization != null) {
-      builder.setHeader("Authorization", authorization);
-    }
+    preparers.forEach(preparer -> preparer.prepare(builder, contentType, url));
+  }
+
+  public void remove(PostRequestPreparer preparer) {
+    preparers.remove(preparer);
+  }
+
+  public void remove(Class<?> preparerClass) {
+    preparers.removeIf(preparerClass::isInstance);
   }
 }

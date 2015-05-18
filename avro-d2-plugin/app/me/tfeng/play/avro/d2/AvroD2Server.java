@@ -115,6 +115,7 @@ public class AvroD2Server implements ExtendedStartable, Watcher {
       close();
       LOG.info("Registering server for " + protocol.getName() + " at " + url);
       ZooKeeper zk = AvroD2Plugin.getInstance().getZooKeeper();
+      AvroD2Helper.createVersionNode(zk, protocol);
       nodePath = AvroD2Helper.createServerNode(zk, protocol, url);
       zk.getData(nodePath, this, null);
     } catch (Exception e) {

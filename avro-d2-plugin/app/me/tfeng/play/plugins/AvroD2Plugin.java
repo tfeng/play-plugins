@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -58,23 +59,15 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
 
   private static final ALogger LOG = Logger.of(AvroD2Plugin.class);
 
-  public static <T> T client(Class<T> interfaceClass) {
-    return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()));
-  }
-
-  public static <T> T client(Class<T> interfaceClass, PostRequestPreparer postRequestPreparer) {
+  public static <T> T client(Class<T> interfaceClass, PostRequestPreparer... postRequestPreparers) {
     return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()),
-        postRequestPreparer);
-  }
-
-  public static <T> T client(Class<T> interfaceClass, SpecificData data) {
-    return client(interfaceClass, data, null);
+        postRequestPreparers);
   }
 
   public static <T> T client(Class<T> interfaceClass, SpecificData data,
-      PostRequestPreparer postRequestPreparer) {
+      PostRequestPreparer... postRequestPreparers) {
     AvroD2Client client = new AvroD2Client(interfaceClass, data);
-    client.setPostRequestPreparer(postRequestPreparer);
+    Arrays.stream(postRequestPreparers).forEach(client::addPostRequestPreparer);
     return interfaceClass.cast(Proxy.newProxyInstance(interfaceClass.getClassLoader(),
         new Class<?>[] { interfaceClass }, client));
   }

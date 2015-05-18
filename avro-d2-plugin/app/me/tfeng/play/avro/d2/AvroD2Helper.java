@@ -33,6 +33,8 @@ import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
 
+import com.google.common.base.Strings;
+
 import me.tfeng.play.utils.Constants;
 
 /**
@@ -79,7 +81,13 @@ public class AvroD2Helper {
   }
 
   public static String getServersZkPath(Protocol protocol) {
-    return "/" + protocol.getName() + "/servers";
+    return getProtocolZkPath(protocol) + "/servers";
+  }
+
+  public static String getProtocolZkPath(Protocol protocol) {
+    return "/protocols/" +
+        (Strings.isNullOrEmpty(protocol.getNamespace()) ?
+            protocol.getName() : protocol.getNamespace() + "." + protocol.getName());
   }
 
   public static URI getUri(Protocol protocol) {
@@ -91,6 +99,6 @@ public class AvroD2Helper {
   }
 
   public static String getVersionsZkPath(Protocol protocol) {
-    return "/" + protocol.getName() + "/versions";
+    return getProtocolZkPath(protocol) + "/versions";
   }
 }

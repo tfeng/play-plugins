@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
-import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -44,6 +43,13 @@ import javax.script.SimpleBindings;
 import org.springframework.beans.factory.annotation.Value;
 import org.webjars.WebJarAssetLocator;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.io.CharStreams;
+
+import akka.dispatch.ExecutionContexts;
+import akka.dispatch.Futures;
 import me.tfeng.play.utils.Constants;
 import play.Application;
 import play.Logger;
@@ -52,13 +58,6 @@ import play.Play;
 import play.libs.F.Promise;
 import scala.concurrent.ExecutionContextExecutorService;
 import scala.concurrent.Future;
-import akka.dispatch.ExecutionContexts;
-import akka.dispatch.Futures;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.CharStreams;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -130,7 +129,7 @@ public class DustPlugin extends AbstractPlugin {
   }
 
   public Promise<String> render(String template, JsonNode data) {
-    Future<String> future = Futures.future(() -> {
+    Future<String> future = Futures.<String>future(() -> {
       ScriptEngine engine = engines.poll();
 
       try {
@@ -164,7 +163,7 @@ public class DustPlugin extends AbstractPlugin {
       }
     }, executionContext);
 
-    return Promise.wrap(future);
+    return Promise.<String>wrap(future);
   }
 
   private Object evaluate(ScriptEngine engine, String script, Map<String, Object> data)

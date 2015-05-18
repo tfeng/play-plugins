@@ -25,16 +25,16 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-import me.tfeng.play.http.PostRequestPreparer;
-
-import me.tfeng.play.plugins.HttpPlugin;
 import org.apache.avro.ipc.specific.SpecificRequestor;
 import org.apache.avro.specific.SpecificData;
 
+import me.tfeng.play.http.PostRequestPreparer;
+import me.tfeng.play.plugins.HttpPlugin;
 import play.Logger;
 import play.Logger.ALogger;
 import play.libs.F.Promise;
 import play.mvc.Controller;
+import play.mvc.Http.Request;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -50,7 +50,8 @@ public class IpcRequestor extends SpecificRequestor {
 
   private static final ALogger LOG = Logger.of(IpcRequestor.class);
 
-  private PostRequestPreparer postRequestPreparer;
+  private volatile PostRequestPreparerChain postRequestPreparerChain =
+      new PostRequestPreparerChain();
 
   public IpcRequestor(Class<?> iface, AsyncTransceiver transceiver) throws IOException {
     super(iface, (Transceiver) transceiver);
@@ -59,6 +60,10 @@ public class IpcRequestor extends SpecificRequestor {
   public IpcRequestor(Class<?> iface, AsyncTransceiver transceiver, SpecificData data)
       throws IOException {
     super(iface, (Transceiver) transceiver, data);
+  }
+
+  public void addPostRequestPreparer(PostRequestPreparer postRequestPreparer) {
+    postRequestPreparerChain.add(postRequestPreparer);
   }
 
   @Override
@@ -70,13 +75,17 @@ public class IpcRequestor extends SpecificRequestor {
     TransceiverCallback<Object> transceiverCallback =
         new TransceiverCallback<Object>(asyncRequest, callFuture);
 
-    PostRequestPreparer postRequestPreparer = this.postRequestPreparer;
-    if (postRequestPreparer == null) {
-      try {
-        postRequestPreparer = new AuthTokenPreservingPostRequestPreparer(Controller.request());
-      } catch (RuntimeException e) {
-        LOG.info("Unable to get current request; do not pass headers to downstream calls");
-      }
+    PostRequestPreparer postRequestPreparer = null;
+    Request request = null;
+    try {
+      request = Controller.request();
+    } catch (RuntimeException e) {
+      LOG.info("Unable to get current request; do not pass headers to downstream calls");
+      postRequestPreparer = postRequestPreparerChain;
+    }
+    if (request != null) {
+      postRequestPreparer = new PostRequestPreparerChain(
+          new AuthTokenPreservingPostRequestPreparer(request), postRequestPreparerChain);
     }
 
     if (Promise.class.isAssignableFrom(method.getReturnType())) {
@@ -106,7 +115,7 @@ public class IpcRequestor extends SpecificRequestor {
     }
   }
 
-  public void setPostRequestPreparer(PostRequestPreparer postRequestPreparer) {
-    this.postRequestPreparer = postRequestPreparer;
+  public void removePostRequestPreparer(PostRequestPreparer postRequestPreparer) {
+    postRequestPreparerChain.remove(postRequestPreparer);
   }
 }
