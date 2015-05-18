@@ -32,12 +32,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import me.tfeng.play.avro.AvroHelper;
-import me.tfeng.play.avro.d2.AvroD2Client;
-import me.tfeng.play.avro.d2.AvroD2Helper;
-import me.tfeng.play.avro.d2.AvroD2Server;
-import me.tfeng.play.http.PostRequestPreparer;
-
 import org.apache.avro.Protocol;
 import org.apache.avro.specific.SpecificData;
 import org.apache.zookeeper.KeeperException;
@@ -47,6 +41,11 @@ import org.apache.zookeeper.ZooKeeper;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Value;
 
+import me.tfeng.play.avro.AvroHelper;
+import me.tfeng.play.avro.d2.AvroD2Client;
+import me.tfeng.play.avro.d2.AvroD2Helper;
+import me.tfeng.play.avro.d2.AvroD2Server;
+import me.tfeng.play.http.PostRequestPreparer;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
@@ -145,7 +144,7 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     if (zk == null) {
       return false;
     }
-    String path = AvroD2Helper.getZkPath(AvroHelper.getProtocol(interfaceClass));
+    String path = AvroD2Helper.getServersZkPath(AvroHelper.getProtocol(interfaceClass));
     try {
       return !zk.getChildren(path, this).isEmpty();
     } catch (KeeperException | InterruptedException e) {

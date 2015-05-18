@@ -21,13 +21,13 @@
 package me.tfeng.play.kafka;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+
+import org.apache.avro.generic.IndexedRecord;
 
 import kafka.serializer.Decoder;
 import kafka.utils.VerifiableProperties;
 import me.tfeng.play.avro.AvroHelper;
-
-import org.apache.avro.generic.IndexedRecord;
+import me.tfeng.play.utils.Constants;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -35,8 +35,6 @@ import org.apache.avro.generic.IndexedRecord;
 public class AvroDecoder<T extends IndexedRecord> implements Decoder<T> {
 
   private Class<? extends T> recordClass;
-
-  private static final Charset UTF8 = Charset.forName("UTF-8");
 
   public AvroDecoder() {
     this((VerifiableProperties) null);
@@ -55,7 +53,8 @@ public class AvroDecoder<T extends IndexedRecord> implements Decoder<T> {
     try {
       return AvroHelper.decodeRecord(recordClass, data);
     } catch (IOException e) {
-      throw new RuntimeException("Unable to decode Kafka event " + new String(data, UTF8));
+      throw new RuntimeException("Unable to decode Kafka event " +
+          new String(data, Constants.UTF8));
     }
   }
 

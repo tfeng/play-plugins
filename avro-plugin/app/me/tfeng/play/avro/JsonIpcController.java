@@ -37,6 +37,7 @@ import org.apache.http.entity.ContentType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import me.tfeng.play.utils.Constants;
 import play.Logger;
 import play.Logger.ALogger;
 import play.Play;
@@ -57,8 +58,6 @@ public class JsonIpcController extends Controller {
   public static final String CONTENT_TYPE = "avro/json";
 
   private static final ALogger LOG = Logger.of(JsonIpcController.class);
-
-  private static final Charset UTF8 = Charset.forName("utf-8");
 
   @BodyParser.Of(BodyParser.Raw.class)
   public static Promise<Result> post(String message, String protocol) throws Throwable {
@@ -118,7 +117,7 @@ public class JsonIpcController extends Controller {
     Schema schema = message.getRequest();
     if (ArrayUtils.isEmpty(data)) {
       // The method takes no argument; use empty data.
-      data = "{}".getBytes(UTF8);
+      data = "{}".getBytes(Constants.UTF8);
     }
     JsonNode node = Json.parse(new ByteArrayInputStream(data));
     node = AvroHelper.convertFromSimpleRecord(schema, node);

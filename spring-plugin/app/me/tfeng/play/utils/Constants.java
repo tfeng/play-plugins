@@ -18,25 +18,14 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.kafka;
+package me.tfeng.play.utils;
 
-import org.I0Itec.zkclient.exception.ZkMarshallingError;
-import org.I0Itec.zkclient.serialize.ZkSerializer;
-
-import me.tfeng.play.utils.Constants;
+import java.nio.charset.Charset;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class ZkStringSerializer implements ZkSerializer {
+public class Constants {
 
-  @Override
-  public Object deserialize(byte[] bytes) throws ZkMarshallingError {
-    return new String(bytes, Constants.UTF8);
-  }
-
-  @Override
-  public byte[] serialize(Object data) throws ZkMarshallingError {
-    return ((String) data).getBytes(Constants.UTF8);
-  }
+  public static final Charset UTF8 = Charset.forName("utf-8");
 }

@@ -44,6 +44,13 @@ import com.mongodb.util.JSONCallback;
  */
 public class MongoDbTypeConverter {
 
+  public static interface Converter<S, T> {
+
+    public T convertFromMongoDbType(S data);
+
+    public S convertToMongoDbType(T object);
+  }
+
   public static class BSONTimestampToLongConverter implements Converter<BSONTimestamp, Long> {
 
     @Override
@@ -79,13 +86,6 @@ public class MongoDbTypeConverter {
       int inc = Integer.parseInt(matcher.group(2));
       return new BSONTimestamp(time, inc);
     }
-  }
-
-  public static interface Converter<S, T> {
-
-    public T convertFromMongoDbType(S data);
-
-    public S convertToMongoDbType(T object);
   }
 
   public static class DateToLongConverter implements Converter<Date, Long> {

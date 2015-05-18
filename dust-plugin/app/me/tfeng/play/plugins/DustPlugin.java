@@ -44,6 +44,7 @@ import javax.script.SimpleBindings;
 import org.springframework.beans.factory.annotation.Value;
 import org.webjars.WebJarAssetLocator;
 
+import me.tfeng.play.utils.Constants;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
@@ -185,7 +186,7 @@ public class DustPlugin extends AbstractPlugin {
 
   private String readAndClose(InputStream stream) {
     try {
-      return CharStreams.toString(new InputStreamReader(stream, Charset.forName("utf8")));
+      return CharStreams.toString(new InputStreamReader(stream, Constants.UTF8));
     } catch (IOException e) {
       throw new RuntimeException("Unable to read from stream", e);
     } finally {

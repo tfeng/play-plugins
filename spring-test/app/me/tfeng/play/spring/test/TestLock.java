@@ -34,13 +34,13 @@ import play.Logger.ALogger;
  */
 public final class TestLock {
 
-  private static FileLock fileLock;
-
   private static final Object LOCAL_LOCK = new Object();
 
-  private static File lockFile;
-
   private static final ALogger LOG = Logger.of(TestLock.class);
+
+  private static FileLock fileLock;
+
+  private static File lockFile;
 
   public static void lock(File file) {
     synchronized (LOCAL_LOCK) {

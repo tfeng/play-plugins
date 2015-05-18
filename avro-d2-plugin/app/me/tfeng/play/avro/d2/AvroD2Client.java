@@ -23,14 +23,9 @@ package me.tfeng.play.avro.d2;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import me.tfeng.play.avro.AvroHelper;
-import me.tfeng.play.http.PostRequestPreparer;
-import me.tfeng.play.plugins.AvroD2Plugin;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.ipc.IpcRequestor;
@@ -39,6 +34,10 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
+import me.tfeng.play.avro.AvroHelper;
+import me.tfeng.play.http.PostRequestPreparer;
+import me.tfeng.play.plugins.AvroD2Plugin;
+import me.tfeng.play.utils.Constants;
 import play.Logger;
 import play.Logger.ALogger;
 
@@ -108,7 +107,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     }
 
     List<String> children;
-    String path = AvroD2Helper.getZkPath(protocol);
+    String path = AvroD2Helper.getServersZkPath(protocol);
     try {
       children = zk.getChildren(path, this);
     } catch (Exception e) {
@@ -123,7 +122,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
         String childPath = path + "/" + child;
         try {
           byte[] data = zk.getData(childPath, false, null);
-          String serverUrl = new String(data, Charset.forName("utf8"));
+          String serverUrl = new String(data, Constants.UTF8);
           serverUrls.add(new URL(serverUrl));
         } catch (Exception e) {
           LOG.warn("Unable to get server URL from node " + childPath, e);

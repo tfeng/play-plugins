@@ -23,9 +23,6 @@ package me.tfeng.play.avro.d2;
 import java.net.URL;
 import java.util.concurrent.TimeUnit;
 
-import me.tfeng.play.plugins.AvroD2Plugin;
-import me.tfeng.play.spring.ExtendedStartable;
-
 import org.apache.avro.Protocol;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -35,6 +32,8 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
 
+import me.tfeng.play.plugins.AvroD2Plugin;
+import me.tfeng.play.spring.ExtendedStartable;
 import play.Logger;
 import play.Logger.ALogger;
 
@@ -116,7 +115,7 @@ public class AvroD2Server implements ExtendedStartable, Watcher {
       close();
       LOG.info("Registering server for " + protocol.getName() + " at " + url);
       ZooKeeper zk = AvroD2Plugin.getInstance().getZooKeeper();
-      nodePath = AvroD2Helper.createProtocolNode(zk, protocol, url);
+      nodePath = AvroD2Helper.createServerNode(zk, protocol, url);
       zk.getData(nodePath, this, null);
     } catch (Exception e) {
       LOG.warn("Unable to register server for " + protocol.getName() + "; retry later", e);
