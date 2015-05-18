@@ -112,7 +112,7 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     try {
       zk = new ZooKeeper(zkConnectString, zkSessionTimeout, this);
     } catch (IOException e) {
-      getScheduler().schedule(() -> connect(), getClientRefreshRetryDelay(), TimeUnit.MILLISECONDS);
+      getScheduler().schedule(this::connect, getClientRefreshRetryDelay(), TimeUnit.MILLISECONDS);
       LOG.warn("Unable to connect to ZooKeeper; retry later", e);
     }
   }
@@ -172,7 +172,7 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     case SyncConnected:
       if (expired) {
         expired = false;
-        servers.forEach(server -> server.register());
+        servers.forEach(AvroD2Server::register);
       }
       break;
     case Expired:

@@ -29,13 +29,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.ipc.IpcRequestor;
-import org.apache.avro.ipc.PostRequestPreparerChain;
 import org.apache.avro.specific.SpecificData;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
 import me.tfeng.play.avro.AvroHelper;
+import me.tfeng.play.avro.PostRequestPreparerChain;
 import me.tfeng.play.http.PostRequestPreparer;
 import me.tfeng.play.plugins.AvroD2Plugin;
 import me.tfeng.play.utils.Constants;
@@ -157,7 +157,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   }
 
   private void scheduleRefresh() {
-    AvroD2Plugin.getInstance().getScheduler().schedule(() -> refresh(),
+    AvroD2Plugin.getInstance().getScheduler().schedule(this::refresh,
         AvroD2Plugin.getInstance().getClientRefreshRetryDelay(), TimeUnit.MILLISECONDS);
   }
 }

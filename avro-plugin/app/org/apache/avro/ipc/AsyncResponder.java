@@ -25,9 +25,6 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
-import me.tfeng.play.avro.AvroHelper;
-import me.tfeng.play.plugins.AvroPlugin;
-
 import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Protocol;
 import org.apache.avro.Protocol.Message;
@@ -46,6 +43,8 @@ import org.apache.avro.util.ByteBufferOutputStream;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import me.tfeng.play.avro.AvroHelper;
+import me.tfeng.play.plugins.AvroPlugin;
 import play.libs.F.Promise;
 
 /**
@@ -58,10 +57,10 @@ public class AsyncResponder extends SpecificResponder {
   private static final Schema META = Schema.createMap(Schema.create(Schema.Type.BYTES));
 
   private static final GenericDatumReader<Map<String,ByteBuffer>> META_READER =
-      new GenericDatumReader<Map<String,ByteBuffer>>(META);
+      new GenericDatumReader<>(META);
 
   private static final GenericDatumWriter<Map<String,ByteBuffer>> META_WRITER =
-      new GenericDatumWriter<Map<String,ByteBuffer>>(META);
+      new GenericDatumWriter<>(META);
 
   static {
     try {

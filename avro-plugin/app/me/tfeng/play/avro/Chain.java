@@ -18,20 +18,33 @@
  * limitations under the License.
  */
 
-package org.apache.avro.ipc;
+package me.tfeng.play.avro;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 
-import me.tfeng.play.http.PostRequestPreparer;
-import play.libs.F.Promise;
+import com.google.common.collect.Lists;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public interface AsyncTransceiver {
+public class Chain<T> {
 
-  public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request,
-      PostRequestPreparer postRequestPreparer) throws IOException;
+  private final List<T> list = Lists.newArrayList();
+
+  public void add(T element) {
+    list.add(element);
+  }
+
+  public List<T> getAll() {
+    return Collections.unmodifiableList(list);
+  }
+
+  public void remove(Class<?> elementClass) {
+    list.removeIf(elementClass::isInstance);
+  }
+
+  public void remove(T element) {
+    list.remove(element);
+  }
 }

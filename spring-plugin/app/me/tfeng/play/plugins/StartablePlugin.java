@@ -29,14 +29,13 @@ import java.util.ListIterator;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import me.tfeng.play.spring.ExtendedStartable;
-import me.tfeng.play.spring.Startable;
-import me.tfeng.play.utils.DependencyUtils;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 
+import me.tfeng.play.spring.ExtendedStartable;
+import me.tfeng.play.spring.Startable;
+import me.tfeng.play.utils.DependencyUtils;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;

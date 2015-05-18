@@ -22,9 +22,6 @@ package me.tfeng.play.avro;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
-
-import me.tfeng.play.plugins.AvroPlugin;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.Protocol.Message;
@@ -37,6 +34,9 @@ import org.apache.http.entity.ContentType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
+import me.tfeng.play.plugins.AvroPlugin;
 import me.tfeng.play.utils.Constants;
 import play.Logger;
 import play.Logger.ALogger;
@@ -47,8 +47,6 @@ import play.mvc.BodyParser;
 import play.mvc.Controller;
 import play.mvc.Result;
 import play.mvc.Results;
-
-import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)

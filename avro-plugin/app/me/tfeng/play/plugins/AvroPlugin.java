@@ -28,12 +28,14 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.apache.avro.ipc.AsyncHttpTransceiver;
-import org.apache.avro.ipc.AsyncTransceiver;
 import org.apache.avro.ipc.IpcRequestor;
 import org.apache.avro.specific.SpecificData;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Value;
 
+import me.tfeng.play.avro.AsyncTransceiver;
+import me.tfeng.play.avro.ProtocolVersionResolver;
+import me.tfeng.play.avro.ProtocolVersionResolverChain;
 import me.tfeng.play.http.PostRequestPreparer;
 import play.Application;
 import play.Logger;
@@ -82,16 +84,19 @@ public class AvroPlugin extends AbstractPlugin {
   public static AvroPlugin getInstance() {
     return Play.application().plugin(AvroPlugin.class);
   }
-
   private ExecutionContext executionContext;
-
   @Value("${avro-plugin.execution-context:play.akka.actor.default-dispatcher}")
   private String executionContextId;
-
   private Map<Class<?>, Object> protocolImplementations;
+  private ProtocolVersionResolverChain protocolVersionResolvers =
+      new ProtocolVersionResolverChain();
 
   public AvroPlugin(Application application) {
     super(application);
+  }
+
+  public void addProtocolVersionResolver(ProtocolVersionResolver resolver) {
+    protocolVersionResolvers.add(resolver);
   }
 
   public ExecutionContext getExecutionContext() {
@@ -100,6 +105,10 @@ public class AvroPlugin extends AbstractPlugin {
 
   public Map<Class<?>, Object> getProtocolImplementations() {
     return protocolImplementations;
+  }
+
+  public ProtocolVersionResolverChain getProtocolVersionResolvers() {
+    return protocolVersionResolvers;
   }
 
   @Override

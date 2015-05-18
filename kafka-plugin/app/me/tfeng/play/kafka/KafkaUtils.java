@@ -22,10 +22,10 @@ package me.tfeng.play.kafka;
 
 import java.util.Properties;
 
+import org.I0Itec.zkclient.ZkClient;
+
 import kafka.admin.AdminUtils;
 import kafka.utils.ZkUtils;
-
-import org.I0Itec.zkclient.ZkClient;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)

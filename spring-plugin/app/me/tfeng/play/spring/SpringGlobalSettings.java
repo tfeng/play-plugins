@@ -20,11 +20,10 @@
 
 package me.tfeng.play.spring;
 
-import me.tfeng.play.plugins.SpringPlugin;
-
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import me.tfeng.play.plugins.SpringPlugin;
 import play.Application;
 import play.GlobalSettings;
 import play.libs.F.Promise;

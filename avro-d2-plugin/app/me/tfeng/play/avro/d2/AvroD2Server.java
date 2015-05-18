@@ -120,7 +120,7 @@ public class AvroD2Server implements ExtendedStartable, Watcher {
       zk.getData(nodePath, this, null);
     } catch (Exception e) {
       LOG.warn("Unable to register server for " + protocol.getName() + "; retry later", e);
-      AvroD2Plugin.getInstance().getScheduler().schedule(() -> register(),
+      AvroD2Plugin.getInstance().getScheduler().schedule(this::register,
           AvroD2Plugin.getInstance().getServerRegisterRetryDelay(), TimeUnit.MILLISECONDS);
     }
   }

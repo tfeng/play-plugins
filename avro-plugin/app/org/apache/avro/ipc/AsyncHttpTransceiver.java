@@ -20,14 +20,6 @@
 
 package org.apache.avro.ipc;
 
-import me.tfeng.play.http.PostRequestPreparer;
-import me.tfeng.play.plugins.AvroPlugin;
-import me.tfeng.play.plugins.HttpPlugin;
-import org.apache.avro.AvroRuntimeException;
-import org.apache.avro.specific.SpecificRecord;
-import play.libs.F.Promise;
-import play.libs.ws.WSResponse;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,6 +27,16 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.List;
+
+import org.apache.avro.AvroRuntimeException;
+import org.apache.avro.specific.SpecificRecord;
+
+import me.tfeng.play.avro.AsyncTransceiver;
+import me.tfeng.play.http.PostRequestPreparer;
+import me.tfeng.play.plugins.AvroPlugin;
+import me.tfeng.play.plugins.HttpPlugin;
+import play.libs.F.Promise;
+import play.libs.ws.WSResponse;
 
 
 /**

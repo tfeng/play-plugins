@@ -20,12 +20,12 @@
 
 package me.tfeng.play.factories;
 
-import me.tfeng.play.plugins.AvroD2Plugin;
-
 import org.apache.avro.specific.SpecificData;
 import org.springframework.beans.factory.FactoryBean;
 
 import com.google.common.base.MoreObjects;
+
+import me.tfeng.play.plugins.AvroD2Plugin;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)

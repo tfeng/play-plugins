@@ -22,13 +22,13 @@ package me.tfeng.play.factories;
 
 import java.net.URL;
 
-import me.tfeng.play.plugins.AvroPlugin;
-
 import org.apache.avro.specific.SpecificData;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.Required;
 
 import com.google.common.base.MoreObjects;
+
+import me.tfeng.play.plugins.AvroPlugin;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)

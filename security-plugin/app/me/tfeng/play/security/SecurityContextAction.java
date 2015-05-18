@@ -22,10 +22,9 @@ package me.tfeng.play.security;
 
 import java.util.UUID;
 
-import me.tfeng.play.plugins.SecurityPlugin;
-
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import me.tfeng.play.plugins.SecurityPlugin;
 import play.libs.F.Promise;
 import play.mvc.Action;
 import play.mvc.Http.Context;

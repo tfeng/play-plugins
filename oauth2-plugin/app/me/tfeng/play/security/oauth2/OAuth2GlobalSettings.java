@@ -22,12 +22,11 @@ package me.tfeng.play.security.oauth2;
 
 import java.lang.reflect.Method;
 
-import me.tfeng.play.plugins.OAuth2Plugin;
-import me.tfeng.play.spring.SpringGlobalSettings;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.common.exceptions.OAuth2Exception;
 
+import me.tfeng.play.plugins.OAuth2Plugin;
+import me.tfeng.play.spring.SpringGlobalSettings;
 import play.libs.F.Promise;
 import play.mvc.Action;
 import play.mvc.Http.Context;

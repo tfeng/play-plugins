@@ -18,42 +18,34 @@
  * limitations under the License.
  */
 
-package org.apache.avro.ipc;
+package me.tfeng.play.avro;
 
-import java.net.URL;
+import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 
-import com.google.common.collect.Lists;
-import com.ning.http.client.AsyncHttpClient;
-
-import me.tfeng.play.http.PostRequestPreparer;
+import org.apache.avro.Protocol;
+import org.apache.avro.io.Decoder;
+import org.apache.avro.io.Encoder;
+import org.apache.avro.ipc.Transceiver;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class PostRequestPreparerChain implements PostRequestPreparer {
+public class ProtocolVersionResolverChain extends Chain<ProtocolVersionResolver>
+    implements ProtocolVersionResolver {
 
-  private final List<PostRequestPreparer> preparers = Lists.newArrayList();
-
-  public PostRequestPreparerChain(PostRequestPreparer... preparers) {
-    Arrays.stream(preparers).forEach(this.preparers::add);
-  }
-
-  public void add(PostRequestPreparer preparer) {
-    preparers.add(preparer);
+  public ProtocolVersionResolverChain(ProtocolVersionResolver... resolvers) {
+    Arrays.stream(resolvers).forEach(this::add);
   }
 
   @Override
-  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
-    preparers.forEach(preparer -> preparer.prepare(builder, contentType, url));
-  }
-
-  public void remove(PostRequestPreparer preparer) {
-    preparers.remove(preparer);
-  }
-
-  public void remove(Class<?> preparerClass) {
-    preparers.removeIf(preparerClass::isInstance);
+  public Protocol resolve(Decoder in, Encoder out, Transceiver connection) throws IOException {
+    for (ProtocolVersionResolver resolver: getAll()) {
+      Protocol protocol = resolver.resolve(in, out, connection);
+      if (protocol != null) {
+        return protocol;
+      }
+    }
+    return null;
   }
 }

@@ -43,12 +43,12 @@ import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
 
-import play.libs.Json;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import play.libs.Json;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -84,7 +84,7 @@ public class AvroHelper {
   public static <T> T decodeRecord(Class<T> recordClass, byte[] data) throws IOException {
     DecoderFactory decoderFactory = DecoderFactory.get();
     BinaryDecoder binaryDecoder = decoderFactory.binaryDecoder(data, null);
-    SpecificDatumReader<T> datumReader = new SpecificDatumReader<T>(getSchema(recordClass));
+    SpecificDatumReader<T> datumReader = new SpecificDatumReader<>(getSchema(recordClass));
     return datumReader.read(null, binaryDecoder);
   }
 
@@ -139,7 +139,7 @@ public class AvroHelper {
     JsonGenerator generator =
         new JsonFactory().createJsonGenerator(outputStream, JsonEncoding.UTF8);
     generator.useDefaultPrettyPrinter();
-    SpecificDatumWriter<Object> writer = new SpecificDatumWriter<Object>(schema);
+    SpecificDatumWriter<Object> writer = new SpecificDatumWriter<>(schema);
     JsonEncoder encoder = EncoderFactory.get().jsonEncoder(schema, generator);
     writer.write(object, encoder);
     encoder.flush();

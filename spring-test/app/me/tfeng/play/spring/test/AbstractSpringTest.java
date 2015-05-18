@@ -23,8 +23,6 @@ package me.tfeng.play.spring.test;
 import java.io.File;
 import java.io.IOException;
 
-import me.tfeng.play.spring.ApplicationContextHolder;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
@@ -33,6 +31,8 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import me.tfeng.play.spring.ApplicationContextHolder;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)

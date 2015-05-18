@@ -17,15 +17,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
-
-import me.tfeng.play.avro.AvroHelper;
-import me.tfeng.play.mongodb.MongoDbTypeConverter;
-import me.tfeng.play.mongodb.RecordConverter;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData.Record;
@@ -41,6 +38,15 @@ import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
+import com.mongodb.util.JSON;
+
+import me.tfeng.play.avro.AvroHelper;
+import me.tfeng.play.mongodb.MongoDbTypeConverter;
+import me.tfeng.play.mongodb.RecordConverter;
 import play.libs.Json;
 import test.Arrays;
 import test.ArraysOfRecords;
@@ -55,12 +61,6 @@ import test.StringArray;
 import test.Types1;
 import test.Types2;
 import test.Unions;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
-import com.mongodb.util.JSON;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)

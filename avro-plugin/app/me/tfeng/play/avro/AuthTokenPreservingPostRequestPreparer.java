@@ -18,34 +18,31 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.kafka;
+package me.tfeng.play.avro;
 
-import java.io.IOException;
+import java.net.URL;
 
-import org.apache.avro.generic.IndexedRecord;
+import com.ning.http.client.AsyncHttpClient;
 
-import kafka.serializer.Encoder;
-import kafka.utils.VerifiableProperties;
-import me.tfeng.play.avro.AvroHelper;
+import me.tfeng.play.http.PostRequestPreparer;
+import play.mvc.Http.Request;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroEncoder<T extends IndexedRecord> implements Encoder<T> {
+public class AuthTokenPreservingPostRequestPreparer implements PostRequestPreparer {
 
-  public AvroEncoder() {
-    this(null);
-  }
+  private Request request;
 
-  public AvroEncoder(VerifiableProperties verifiableProperties) {
+  public AuthTokenPreservingPostRequestPreparer(Request request) {
+    this.request = request;
   }
 
   @Override
-  public byte[] toBytes(T record) {
-    try {
-      return AvroHelper.encodeRecord(record);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to encode Kafka event " + record);
+  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
+    String authorization = request.getHeader("Authorization");
+    if (authorization != null) {
+      builder.setHeader("Authorization", authorization);
     }
   }
 }

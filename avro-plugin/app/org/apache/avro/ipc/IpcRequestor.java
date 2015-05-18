@@ -28,6 +28,9 @@ import java.util.List;
 import org.apache.avro.ipc.specific.SpecificRequestor;
 import org.apache.avro.specific.SpecificData;
 
+import me.tfeng.play.avro.AsyncTransceiver;
+import me.tfeng.play.avro.AuthTokenPreservingPostRequestPreparer;
+import me.tfeng.play.avro.PostRequestPreparerChain;
 import me.tfeng.play.http.PostRequestPreparer;
 import me.tfeng.play.plugins.HttpPlugin;
 import play.Logger;
@@ -71,9 +74,9 @@ public class IpcRequestor extends SpecificRequestor {
     AsyncTransceiver transceiver = (AsyncTransceiver) getTransceiver();
     AsyncRequest asyncRequest = new AsyncRequest(method.getName(), args, new RPCContext());
     CallFuture<Object> callFuture =
-        asyncRequest.getMessage().isOneWay() ? null : new CallFuture<Object>();
+        asyncRequest.getMessage().isOneWay() ? null : new CallFuture<>();
     TransceiverCallback<Object> transceiverCallback =
-        new TransceiverCallback<Object>(asyncRequest, callFuture);
+        new TransceiverCallback<>(asyncRequest, callFuture);
 
     PostRequestPreparer postRequestPreparer = null;
     Request request = null;

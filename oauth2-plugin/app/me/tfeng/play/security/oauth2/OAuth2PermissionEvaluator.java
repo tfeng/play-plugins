@@ -22,10 +22,10 @@ package me.tfeng.play.security.oauth2;
 
 import java.io.Serializable;
 
-import me.tfeng.play.plugins.OAuth2Plugin;
-
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.Authentication;
+
+import me.tfeng.play.plugins.OAuth2Plugin;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)

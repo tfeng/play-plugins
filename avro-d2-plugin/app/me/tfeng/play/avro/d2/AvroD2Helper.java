@@ -36,6 +36,8 @@ import org.apache.zookeeper.ZooKeeper;
 import com.google.common.base.Strings;
 
 import me.tfeng.play.utils.Constants;
+import play.Logger;
+import play.Logger.ALogger;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -43,6 +45,14 @@ import me.tfeng.play.utils.Constants;
 public class AvroD2Helper {
 
   public static final String SCHEME = "avsd";
+  private static final ALogger LOG = Logger.of(AvroD2Helper.class);
+
+  public static String createServerNode(ZooKeeper zk, Protocol protocol, URL serverUrl)
+      throws KeeperException, InterruptedException {
+    ensurePath(zk, getServersZkPath(protocol));
+    return zk.create(getServersZkPath(protocol) + "/", serverUrl.toString().getBytes(),
+        Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+  }
 
   public static void createVersionNode(ZooKeeper zk, Protocol protocol)
       throws KeeperException, InterruptedException {
@@ -55,13 +65,6 @@ public class AvroD2Helper {
     } catch (NodeExistsException e) {
       // Ignore.
     }
-  }
-
-  public static String createServerNode(ZooKeeper zk, Protocol protocol, URL serverUrl)
-      throws KeeperException, InterruptedException {
-    ensurePath(zk, getServersZkPath(protocol));
-    return zk.create(getServersZkPath(protocol) + "/", serverUrl.toString().getBytes(),
-        Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
   }
 
   public static void ensurePath(ZooKeeper zk, String path) throws KeeperException,
@@ -80,14 +83,12 @@ public class AvroD2Helper {
     }
   }
 
-  public static String getServersZkPath(Protocol protocol) {
-    return getProtocolZkPath(protocol) + "/servers";
+  public static String getProtocolZkPath(String namespace, String name) {
+    return "/protocols/" + (Strings.isNullOrEmpty(namespace) ? name : namespace + "." + name);
   }
 
-  public static String getProtocolZkPath(Protocol protocol) {
-    return "/protocols/" +
-        (Strings.isNullOrEmpty(protocol.getNamespace()) ?
-            protocol.getName() : protocol.getNamespace() + "." + protocol.getName());
+  public static String getServersZkPath(Protocol protocol) {
+    return getProtocolZkPath(protocol.getNamespace(), protocol.getName()) + "/servers";
   }
 
   public static URI getUri(Protocol protocol) {
@@ -99,6 +100,20 @@ public class AvroD2Helper {
   }
 
   public static String getVersionsZkPath(Protocol protocol) {
-    return getProtocolZkPath(protocol) + "/versions";
+    return getProtocolZkPath(protocol.getNamespace(), protocol.getName()) + "/versions";
+  }
+
+  public static Protocol readProtocolFromZk(ZooKeeper zk, String namespace, String name,
+      String md5) {
+    String versionPath = getProtocolZkPath(namespace, name) + "/versions/" + md5;
+    try {
+      byte[] data = zk.getData(versionPath, false, null);
+      String schema = new String(data, Constants.UTF8);
+      return Protocol.parse(schema);
+    } catch (InterruptedException | KeeperException e) {
+      LOG.warn("Unable to read schema from ZooKeeper for protocol (namespace=" + namespace +
+          ", name=" + name + ", MD5=" + md5 + ")");
+      return null;
+    }
   }
 }

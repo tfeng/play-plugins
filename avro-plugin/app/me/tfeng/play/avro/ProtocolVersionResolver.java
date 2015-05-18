@@ -18,34 +18,19 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.kafka;
+package me.tfeng.play.avro;
 
 import java.io.IOException;
 
-import org.apache.avro.generic.IndexedRecord;
-
-import kafka.serializer.Encoder;
-import kafka.utils.VerifiableProperties;
-import me.tfeng.play.avro.AvroHelper;
+import org.apache.avro.Protocol;
+import org.apache.avro.io.Decoder;
+import org.apache.avro.io.Encoder;
+import org.apache.avro.ipc.Transceiver;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroEncoder<T extends IndexedRecord> implements Encoder<T> {
+public interface ProtocolVersionResolver {
 
-  public AvroEncoder() {
-    this(null);
-  }
-
-  public AvroEncoder(VerifiableProperties verifiableProperties) {
-  }
-
-  @Override
-  public byte[] toBytes(T record) {
-    try {
-      return AvroHelper.encodeRecord(record);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to encode Kafka event " + record);
-    }
-  }
+  public Protocol resolve(Decoder in, Encoder out, Transceiver connection) throws IOException;
 }

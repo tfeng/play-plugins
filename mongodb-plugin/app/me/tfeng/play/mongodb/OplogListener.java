@@ -22,18 +22,17 @@ package me.tfeng.play.mongodb;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import me.tfeng.play.spring.Startable;
-
 import org.bson.Document;
 import org.bson.types.BSONTimestamp;
-
-import play.Logger;
-import play.Logger.ALogger;
 
 import com.mongodb.CursorType;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
+
+import me.tfeng.play.spring.Startable;
+import play.Logger;
+import play.Logger.ALogger;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)

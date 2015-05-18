@@ -23,21 +23,20 @@ package me.tfeng.play.plugins;
 import java.util.Collections;
 import java.util.List;
 
-import me.tfeng.play.spring.ApplicationContextHolder;
-import me.tfeng.play.spring.WithSpringConfig;
-
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.core.env.AbstractEnvironment;
 
+import com.google.common.collect.Lists;
+
+import me.tfeng.play.spring.ApplicationContextHolder;
+import me.tfeng.play.spring.WithSpringConfig;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
 import play.Play;
 import play.api.Plugin;
 import play.libs.Scala;
-
-import com.google.common.collect.Lists;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)

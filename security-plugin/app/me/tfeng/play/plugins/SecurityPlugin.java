@@ -20,12 +20,11 @@
 
 package me.tfeng.play.plugins;
 
-import me.tfeng.play.security.CacheSecurityContextStore;
-import me.tfeng.play.security.SecurityContextStore;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
+import me.tfeng.play.security.CacheSecurityContextStore;
+import me.tfeng.play.security.SecurityContextStore;
 import play.Application;
 import play.Play;
 

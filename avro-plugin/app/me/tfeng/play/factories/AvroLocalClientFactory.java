@@ -25,11 +25,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
-import me.tfeng.play.plugins.AvroPlugin;
-
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.Required;
 
+import me.tfeng.play.plugins.AvroPlugin;
 import play.libs.F.Promise;
 
 /**

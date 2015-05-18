@@ -23,11 +23,16 @@ package me.tfeng.play.plugins;
 import java.io.IOException;
 import java.net.URL;
 
-import me.tfeng.play.http.PostRequestPreparer;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
+import com.ning.http.client.AsyncCompletionHandler;
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
+import com.ning.http.client.AsyncHttpClientConfigBean;
+import com.ning.http.client.Response;
+
+import me.tfeng.play.http.PostRequestPreparer;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
@@ -35,12 +40,6 @@ import play.Play;
 import play.libs.F.Promise;
 import play.libs.ws.WSResponse;
 import play.libs.ws.ning.NingWSResponse;
-
-import com.ning.http.client.AsyncCompletionHandler;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
-import com.ning.http.client.AsyncHttpClientConfigBean;
-import com.ning.http.client.Response;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
