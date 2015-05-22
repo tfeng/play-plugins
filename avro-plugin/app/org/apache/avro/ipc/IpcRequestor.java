@@ -22,11 +22,17 @@ package org.apache.avro.ipc;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.nio.ByteBuffer;
-import java.util.List;
 
+import org.apache.avro.Protocol;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.io.DatumReader;
+import org.apache.avro.io.DatumWriter;
 import org.apache.avro.ipc.specific.SpecificRequestor;
 import org.apache.avro.specific.SpecificData;
+import org.apache.avro.specific.SpecificDatumReader;
+import org.apache.avro.specific.SpecificDatumWriter;
 
 import me.tfeng.play.avro.AsyncTransceiver;
 import me.tfeng.play.avro.AuthTokenPreservingPostRequestPreparer;
@@ -52,7 +58,7 @@ public class IpcRequestor extends SpecificRequestor {
   }
 
   private static final ALogger LOG = Logger.of(IpcRequestor.class);
-
+  private boolean isGeneric;
   private volatile PostRequestPreparerChain postRequestPreparerChain =
       new PostRequestPreparerChain();
 
@@ -65,60 +71,91 @@ public class IpcRequestor extends SpecificRequestor {
     super(iface, (Transceiver) transceiver, data);
   }
 
+  public IpcRequestor(Protocol protocol, AsyncTransceiver transceiver) throws IOException {
+    super(protocol, (Transceiver) transceiver);
+  }
+
+  public IpcRequestor(Protocol protocol, AsyncTransceiver transceiver, SpecificData data)
+      throws IOException {
+    super(protocol, (Transceiver) transceiver, data);
+  }
+
   public void addPostRequestPreparer(PostRequestPreparer postRequestPreparer) {
     postRequestPreparerChain.add(postRequestPreparer);
   }
 
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    Promise<Object> promise = request(method.getName(), args);
+    if (Promise.class.isAssignableFrom(method.getReturnType())) {
+      return promise;
+    } else {
+      int timeout = HttpPlugin.getInstance().getRequestTimeout();
+      return promise.get(timeout);
+    }
+  }
+
+  public boolean isGeneric() {
+    return isGeneric;
+  }
+
+  public void removePostRequestPreparer(PostRequestPreparer postRequestPreparer) {
+    postRequestPreparerChain.remove(postRequestPreparer);
+  }
+
+  public Promise<Object> request(String message, Object[] args) throws Exception {
     AsyncTransceiver transceiver = (AsyncTransceiver) getTransceiver();
-    AsyncRequest asyncRequest = new AsyncRequest(method.getName(), args, new RPCContext());
+    AsyncRequest asyncRequest = new AsyncRequest(message, args, new RPCContext());
     CallFuture<Object> callFuture =
         asyncRequest.getMessage().isOneWay() ? null : new CallFuture<>();
     TransceiverCallback<Object> transceiverCallback =
         new TransceiverCallback<>(asyncRequest, callFuture);
 
     PostRequestPreparer postRequestPreparer = null;
-    Request request = null;
+    Request controllerRequest = null;
     try {
-      request = Controller.request();
+      controllerRequest = Controller.request();
     } catch (RuntimeException e) {
       LOG.info("Unable to get current request; do not pass headers to downstream calls");
       postRequestPreparer = postRequestPreparerChain;
     }
-    if (request != null) {
+    if (controllerRequest != null) {
       postRequestPreparer = new PostRequestPreparerChain(
-          new AuthTokenPreservingPostRequestPreparer(request), postRequestPreparerChain);
+          new AuthTokenPreservingPostRequestPreparer(controllerRequest), postRequestPreparerChain);
     }
 
-    if (Promise.class.isAssignableFrom(method.getReturnType())) {
-      return transceiver.asyncTransceive(asyncRequest.getBytes(), postRequestPreparer).map(
-          response -> {
-            transceiverCallback.handleResult(response);
-            if (callFuture == null) {
-              return null;
-            } else if (callFuture.getError() == null) {
-              return callFuture.getResult();
-            } else {
-              throw callFuture.getError();
-            }
-          });
+    return transceiver.asyncTransceive(asyncRequest.getBytes(), postRequestPreparer).map(
+        response -> {
+          transceiverCallback.handleResult(response);
+          if (callFuture == null) {
+            return null;
+          } else if (callFuture.getError() == null) {
+            return callFuture.getResult();
+          } else {
+            throw callFuture.getError();
+          }
+        });
+  }
+
+  public void setGeneric(boolean isGeneric) {
+    this.isGeneric = isGeneric;
+  }
+
+  @Override
+  protected DatumReader<Object> getDatumReader(Schema writer, Schema reader) {
+    if (isGeneric) {
+      return new GenericDatumReader<>(writer, reader);
     } else {
-      int timeout = HttpPlugin.getInstance().getRequestTimeout();
-      List<ByteBuffer> response =
-          transceiver.asyncTransceive(asyncRequest.getBytes(), postRequestPreparer).get(timeout);
-      transceiverCallback.handleResult(response);
-      if (callFuture == null) {
-        return null;
-      } else if (callFuture.getError() == null) {
-        return callFuture.getResult();
-      } else {
-        throw callFuture.getError();
-      }
+      return new SpecificDatumReader<>(writer, reader, getSpecificData());
     }
   }
 
-  public void removePostRequestPreparer(PostRequestPreparer postRequestPreparer) {
-    postRequestPreparerChain.remove(postRequestPreparer);
+  @Override
+  protected DatumWriter<Object> getDatumWriter(Schema schema) {
+    if (isGeneric) {
+      return new GenericDatumWriter<>(schema);
+    } else {
+      return new SpecificDatumWriter<>(schema, getSpecificData());
+    }
   }
 }

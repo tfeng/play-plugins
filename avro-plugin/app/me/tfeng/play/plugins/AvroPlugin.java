@@ -34,8 +34,8 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Value;
 
 import me.tfeng.play.avro.AsyncTransceiver;
+import me.tfeng.play.avro.HandshakingProtocolVersionResolver;
 import me.tfeng.play.avro.ProtocolVersionResolver;
-import me.tfeng.play.avro.ProtocolVersionResolverChain;
 import me.tfeng.play.http.PostRequestPreparer;
 import play.Application;
 import play.Logger;
@@ -84,19 +84,19 @@ public class AvroPlugin extends AbstractPlugin {
   public static AvroPlugin getInstance() {
     return Play.application().plugin(AvroPlugin.class);
   }
+
   private ExecutionContext executionContext;
+
   @Value("${avro-plugin.execution-context:play.akka.actor.default-dispatcher}")
   private String executionContextId;
+
   private Map<Class<?>, Object> protocolImplementations;
-  private ProtocolVersionResolverChain protocolVersionResolvers =
-      new ProtocolVersionResolverChain();
+
+  private ProtocolVersionResolver protocolVersionResolver =
+      new HandshakingProtocolVersionResolver();
 
   public AvroPlugin(Application application) {
     super(application);
-  }
-
-  public void addProtocolVersionResolver(ProtocolVersionResolver resolver) {
-    protocolVersionResolvers.add(resolver);
   }
 
   public ExecutionContext getExecutionContext() {
@@ -107,8 +107,8 @@ public class AvroPlugin extends AbstractPlugin {
     return protocolImplementations;
   }
 
-  public ProtocolVersionResolverChain getProtocolVersionResolvers() {
-    return protocolVersionResolvers;
+  public ProtocolVersionResolver getProtocolVersionResolver() {
+    return protocolVersionResolver;
   }
 
   @Override
@@ -129,5 +129,9 @@ public class AvroPlugin extends AbstractPlugin {
     } catch (NoSuchBeanDefinitionException e) {
       protocolImplementations = Collections.emptyMap();
     }
+  }
+
+  public void setProtocolVersionResolver(ProtocolVersionResolver resolver) {
+    protocolVersionResolver = resolver;
   }
 }

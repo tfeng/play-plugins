@@ -104,16 +104,10 @@ public class AvroD2Helper {
   }
 
   public static Protocol readProtocolFromZk(ZooKeeper zk, String namespace, String name,
-      String md5) {
+      String md5) throws KeeperException, InterruptedException {
     String versionPath = getProtocolZkPath(namespace, name) + "/versions/" + md5;
-    try {
-      byte[] data = zk.getData(versionPath, false, null);
-      String schema = new String(data, Constants.UTF8);
-      return Protocol.parse(schema);
-    } catch (InterruptedException | KeeperException e) {
-      LOG.warn("Unable to read schema from ZooKeeper for protocol (namespace=" + namespace +
-          ", name=" + name + ", MD5=" + md5 + ")");
-      return null;
-    }
+    byte[] data = zk.getData(versionPath, false, null);
+    String schema = new String(data, Constants.UTF8);
+    return Protocol.parse(schema);
   }
 }

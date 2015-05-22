@@ -20,6 +20,7 @@
 
 package me.tfeng.play.avro.d2;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.avro.Protocol;
 import org.apache.avro.ipc.IpcRequestor;
 import org.apache.avro.specific.SpecificData;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
@@ -41,6 +43,7 @@ import me.tfeng.play.plugins.AvroD2Plugin;
 import me.tfeng.play.utils.Constants;
 import play.Logger;
 import play.Logger.ALogger;
+import play.libs.F.Promise;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
@@ -50,7 +53,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   private static final ALogger LOG = Logger.of(AvroD2Client.class);
 
   private final SpecificData data;
-  private final Class<?> interfaceClass;
+  private boolean isGeneric;
   private boolean isVersionRegistered;
   private volatile int lastIndex = -1;
   private volatile PostRequestPreparerChain postRequestPreparerChain =
@@ -64,9 +67,17 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   }
 
   public AvroD2Client(Class<?> interfaceClass, SpecificData data) {
-    this.interfaceClass = interfaceClass;
     this.data = data;
     protocol = AvroHelper.getProtocol(interfaceClass);
+  }
+
+  public AvroD2Client(Protocol protocol) {
+    this(protocol, SpecificData.get());
+  }
+
+  public AvroD2Client(Protocol protocol, SpecificData data) {
+    this.data = data;
+    this.protocol = protocol;
   }
 
   public void addPostRequestPreparer(PostRequestPreparer postRequestPreparer) {
@@ -93,16 +104,12 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-    if (requestor == null) {
-      refresh();
-      requestor = new IpcRequestor(interfaceClass, new AvroD2Transceiver(this), data);
-      requestor.addPostRequestPreparer(postRequestPreparerChain);
-    }
-    if (!isVersionRegistered) {
-      AvroD2Helper.createVersionNode(AvroD2Plugin.getInstance().getZooKeeper(), protocol);
-      isVersionRegistered = true;
-    }
+    setupRequest();
     return requestor.invoke(proxy, method, args);
+  }
+
+  public boolean isGeneric() {
+    return isGeneric;
   }
 
   @Override
@@ -156,8 +163,30 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     }
   }
 
+  public Promise<Object> request(String message, Object[] request) throws Exception {
+    setupRequest();
+    return requestor.request(message, request);
+  }
+
+  public void setGeneric(boolean isGeneric) {
+    this.isGeneric = isGeneric;
+  }
+
   private void scheduleRefresh() {
     AvroD2Plugin.getInstance().getScheduler().schedule(this::refresh,
         AvroD2Plugin.getInstance().getClientRefreshRetryDelay(), TimeUnit.MILLISECONDS);
+  }
+
+  private synchronized void setupRequest() throws IOException, KeeperException, InterruptedException {
+    if (requestor == null) {
+      refresh();
+      requestor = new IpcRequestor(protocol, new AvroD2Transceiver(this), data);
+      requestor.setGeneric(isGeneric);
+      requestor.addPostRequestPreparer(postRequestPreparerChain);
+    }
+    if (!isVersionRegistered) {
+      AvroD2Helper.createVersionNode(AvroD2Plugin.getInstance().getZooKeeper(), protocol);
+      isVersionRegistered = true;
+    }
   }
 }

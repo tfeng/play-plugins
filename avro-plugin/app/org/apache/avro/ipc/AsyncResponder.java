@@ -20,7 +20,6 @@
 
 package org.apache.avro.ipc;
 
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -34,9 +33,7 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.Decoder;
 import org.apache.avro.io.DecoderFactory;
-import org.apache.avro.io.Encoder;
 import org.apache.avro.io.EncoderFactory;
-import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.ByteBufferInputStream;
 import org.apache.avro.util.ByteBufferOutputStream;
@@ -50,9 +47,7 @@ import play.libs.F.Promise;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AsyncResponder extends SpecificResponder {
-
-  private static final Method HANDSHAKE_METHOD;
+public class AsyncResponder extends InternalSpecificResponder {
 
   private static final Schema META = Schema.createMap(Schema.create(Schema.Type.BYTES));
 
@@ -61,16 +56,6 @@ public class AsyncResponder extends SpecificResponder {
 
   private static final GenericDatumWriter<Map<String,ByteBuffer>> META_WRITER =
       new GenericDatumWriter<>(META);
-
-  static {
-    try {
-      HANDSHAKE_METHOD = Responder.class.getDeclaredMethod("handshake", Decoder.class,
-          Encoder.class, Transceiver.class);
-      HANDSHAKE_METHOD.setAccessible(true);
-    } catch (NoSuchMethodException | SecurityException e) {
-      throw new RuntimeException("Unable to get handshake method", e);
-    }
-  }
 
   private final Object impl;
 
@@ -101,7 +86,7 @@ public class AsyncResponder extends SpecificResponder {
     RPCContext context = new RPCContext();
     List<ByteBuffer> payload = null;
     List<ByteBuffer> handshake = null;
-    Protocol remote = (Protocol) HANDSHAKE_METHOD.invoke(this, in, out, null);
+    Protocol remote = handshake(in, out, null);
     out.flush();
     if (remote == null) {
       // handshake failed

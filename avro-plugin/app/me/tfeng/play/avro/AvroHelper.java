@@ -20,6 +20,7 @@
 
 package me.tfeng.play.avro;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
@@ -30,15 +31,18 @@ import org.apache.avro.Protocol;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
+import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.io.JsonDecoder;
 import org.apache.avro.io.JsonEncoder;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
+import org.apache.commons.lang3.ArrayUtils;
 import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
@@ -48,6 +52,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import me.tfeng.play.utils.Constants;
 import play.libs.Json;
 
 /**
@@ -79,6 +84,19 @@ public class AvroHelper {
     JsonNode node = Json.parse(json);
     node = convertToSimpleRecord(schema, node);
     return node.toString();
+  }
+
+  public static Object createGenericRequestFromRecord(Schema requestSchema, JsonNode record)
+      throws IOException {
+    JsonDecoder jsonDecoder = DecoderFactory.get().jsonDecoder(requestSchema, record.toString());
+    return new GenericDatumReader<>(requestSchema, requestSchema).read(null, jsonDecoder);
+  }
+
+  public static <T> T createSpecificRequestFromRecord(Class<T> requestClass, JsonNode record)
+      throws IOException {
+    JsonDecoder jsonDecoder =
+        DecoderFactory.get().jsonDecoder(getSchema(requestClass), record.toString());
+    return new SpecificDatumReader<>(requestClass).read(null, jsonDecoder);
   }
 
   public static <T> T decodeRecord(Class<T> recordClass, byte[] data) throws IOException {
@@ -127,6 +145,15 @@ public class AvroHelper {
 
   public static boolean isAvroClient(Class<?> clientClass) {
     return clientClass.getAnnotation(AvroClient.class) != null;
+  }
+
+  public static JsonNode parseSimpleJson(Schema schema, byte[] data) throws IOException {
+    if (ArrayUtils.isEmpty(data)) {
+      // The method takes no argument; use empty data.
+      data = "{}".getBytes(Constants.UTF8);
+    }
+    JsonNode node = Json.parse(new ByteArrayInputStream(data));
+    return convertFromSimpleRecord(schema, node);
   }
 
   public static String toJson(IndexedRecord record) throws IOException {

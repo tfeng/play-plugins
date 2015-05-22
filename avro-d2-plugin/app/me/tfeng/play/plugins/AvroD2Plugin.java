@@ -45,6 +45,7 @@ import org.springframework.beans.factory.annotation.Value;
 import me.tfeng.play.avro.AvroHelper;
 import me.tfeng.play.avro.d2.AvroD2Client;
 import me.tfeng.play.avro.d2.AvroD2Helper;
+import me.tfeng.play.avro.d2.AvroD2ProtocolVersionResolver;
 import me.tfeng.play.avro.d2.AvroD2Server;
 import me.tfeng.play.http.PostRequestPreparer;
 import play.Application;
@@ -155,6 +156,8 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     } catch(NoSuchBeanDefinitionException e) {
       protocolPaths = Collections.emptyMap();
     }
+
+    AvroPlugin.getInstance().setProtocolVersionResolver(new AvroD2ProtocolVersionResolver());
 
     connect();
     startServers();

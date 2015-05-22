@@ -21,6 +21,8 @@
 package me.tfeng.play.avro;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.io.Decoder;
@@ -31,8 +33,34 @@ import org.apache.avro.ipc.Transceiver;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public interface ProtocolVersionResolver {
+public class HandshakingProtocolVersionResolver implements ProtocolVersionResolver {
 
+  private static final Method HANDSHAKE_METHOD;
+
+  static {
+    try {
+      HANDSHAKE_METHOD = Responder.class.getDeclaredMethod("handshake", Decoder.class,
+          Encoder.class, Transceiver.class);
+      HANDSHAKE_METHOD.setAccessible(true);
+    } catch (NoSuchMethodException | SecurityException e) {
+      throw new RuntimeException("Unable to get handshake method", e);
+    }
+  }
+
+  @Override
   public Protocol resolve(Responder responder, Decoder in, Encoder out, Transceiver connection)
-      throws IOException;
+      throws IOException {
+    try {
+      return (Protocol) HANDSHAKE_METHOD.invoke(responder, in, out, connection);
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException("Unable to invoke handshake in responder");
+    } catch (InvocationTargetException e) {
+      if (e.getTargetException() instanceof IOException) {
+        throw (IOException) e.getTargetException();
+      } else {
+        throw new RuntimeException("Handshake in responder raised an exception",
+            e.getTargetException());
+      }
+    }
+  }
 }
