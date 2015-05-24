@@ -30,9 +30,9 @@ import com.google.common.collect.Lists;
  */
 public class Chain<T> {
 
-  private final List<T> list = Lists.newArrayList();
+  private final List<T> list = Collections.synchronizedList(Lists.newArrayList());
 
-  public void add(T element) {
+  public synchronized void add(T element) {
     list.add(element);
   }
 

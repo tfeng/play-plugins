@@ -54,12 +54,12 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   private final SpecificData data;
   private boolean isGeneric;
-  private boolean isVersionRegistered;
+  private volatile boolean isVersionRegistered;
   private volatile int lastIndex = -1;
-  private volatile PostRequestPreparerChain postRequestPreparerChain =
+  private final PostRequestPreparerChain postRequestPreparerChain =
       new PostRequestPreparerChain();
   private final Protocol protocol;
-  private volatile IpcRequestor requestor;
+  private volatile boolean refreshed;
   private final List<URL> serverUrls = new ArrayList<>();
 
   public AvroD2Client(Class<?> interfaceClass) {
@@ -82,19 +82,14 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   public void addPostRequestPreparer(PostRequestPreparer postRequestPreparer) {
     postRequestPreparerChain.add(postRequestPreparer);
-    if (requestor != null) {
-      requestor.addPostRequestPreparer(postRequestPreparer);
-    }
   }
 
-  public URL getNextServerUrl() {
-    synchronized(serverUrls) {
-      if (serverUrls.isEmpty()) {
-        throw new RuntimeException("No server is found for " + protocol.getName());
-      } else {
-        lastIndex = (lastIndex + 1) % serverUrls.size();
-        return serverUrls.get(lastIndex);
-      }
+  public synchronized URL getNextServerUrl() {
+    if (serverUrls.isEmpty()) {
+      throw new RuntimeException("No server is found for " + protocol.getName());
+    } else {
+      lastIndex = (lastIndex + 1) % serverUrls.size();
+      return serverUrls.get(lastIndex);
     }
   }
 
@@ -104,11 +99,10 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-    setupRequest();
-    return requestor.invoke(proxy, method, args);
+    return setupRequest().invoke(proxy, method, args);
   }
 
-  public boolean isGeneric() {
+  public synchronized boolean isGeneric() {
     return isGeneric;
   }
 
@@ -135,7 +129,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
       return;
     }
 
-    synchronized(serverUrls) {
+    synchronized(this) {
       serverUrls.clear();
       for (String child : children) {
         String childPath = path + "/" + child;
@@ -158,17 +152,13 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   public void removePostRequestPreparer(PostRequestPreparer postRequestPreparer) {
     postRequestPreparerChain.remove(postRequestPreparer);
-    if (requestor != null) {
-      requestor.removePostRequestPreparer(postRequestPreparer);
-    }
   }
 
   public Promise<Object> request(String message, Object[] request) throws Exception {
-    setupRequest();
-    return requestor.request(message, request);
+    return setupRequest().request(message, request);
   }
 
-  public void setGeneric(boolean isGeneric) {
+  public synchronized void setGeneric(boolean isGeneric) {
     this.isGeneric = isGeneric;
   }
 
@@ -177,16 +167,21 @@ public class AvroD2Client implements Watcher, InvocationHandler {
         AvroD2Plugin.getInstance().getClientRefreshRetryDelay(), TimeUnit.MILLISECONDS);
   }
 
-  private synchronized void setupRequest() throws IOException, KeeperException, InterruptedException {
-    if (requestor == null) {
+  private synchronized IpcRequestor setupRequest() throws IOException, KeeperException,
+      InterruptedException {
+    if (!refreshed) {
+      refreshed = true;
       refresh();
-      requestor = new IpcRequestor(protocol, new AvroD2Transceiver(this), data);
-      requestor.setGeneric(isGeneric);
-      requestor.addPostRequestPreparer(postRequestPreparerChain);
     }
+
     if (!isVersionRegistered) {
       AvroD2Helper.createVersionNode(AvroD2Plugin.getInstance().getZooKeeper(), protocol);
       isVersionRegistered = true;
     }
+
+    IpcRequestor requestor = new IpcRequestor(protocol, new AvroD2Transceiver(this), data);
+    requestor.setGeneric(isGeneric);
+    requestor.addPostRequestPreparer(postRequestPreparerChain);
+    return requestor;
   }
 }
