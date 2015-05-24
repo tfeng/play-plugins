@@ -36,7 +36,7 @@ import org.springframework.beans.factory.annotation.Value;
 import me.tfeng.play.avro.AsyncTransceiver;
 import me.tfeng.play.avro.HandshakingProtocolVersionResolver;
 import me.tfeng.play.avro.ProtocolVersionResolver;
-import me.tfeng.play.http.PostRequestPreparer;
+import me.tfeng.play.http.IpcRequestPreparer;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
@@ -53,17 +53,17 @@ public class AvroPlugin extends AbstractPlugin {
   private static final ALogger LOG = Logger.of(AvroPlugin.class);
 
   public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver,
-      PostRequestPreparer... postRequestPreparers) {
+      IpcRequestPreparer... postRequestPreparers) {
     return client(interfaceClass, transceiver, new SpecificData(interfaceClass.getClassLoader()),
         postRequestPreparers);
   }
 
   @SuppressWarnings("unchecked")
   public static <T> T client(Class<T> interfaceClass, AsyncTransceiver transceiver,
-      SpecificData data, PostRequestPreparer... postRequestPreparers) {
+      SpecificData data, IpcRequestPreparer... postRequestPreparers) {
     try {
       IpcRequestor requestor = new IpcRequestor(interfaceClass, transceiver, data);
-      Arrays.stream(postRequestPreparers).forEach(requestor::addPostRequestPreparer);
+      Arrays.stream(postRequestPreparers).forEach(requestor::addRequestPreparer);
       return (T) Proxy.newProxyInstance(data.getClassLoader(), new Class[] { interfaceClass },
           requestor);
     } catch (IOException e) {
@@ -72,12 +72,12 @@ public class AvroPlugin extends AbstractPlugin {
   }
 
   public static <T> T client(Class<T> interfaceClass, URL url,
-      PostRequestPreparer... postRequestPreparers) {
+      IpcRequestPreparer... postRequestPreparers) {
     return client(interfaceClass, new AsyncHttpTransceiver(url), postRequestPreparers);
   }
 
   public static <T> T client(Class<T> interfaceClass, URL url, SpecificData data,
-      PostRequestPreparer... postRequestPreparers) {
+      IpcRequestPreparer... postRequestPreparers) {
     return client(interfaceClass, new AsyncHttpTransceiver(url), data, postRequestPreparers);
   }
 

@@ -32,7 +32,7 @@ import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.specific.SpecificRecord;
 
 import me.tfeng.play.avro.AsyncTransceiver;
-import me.tfeng.play.http.PostRequestPreparer;
+import me.tfeng.play.http.IpcRequestPreparer;
 import me.tfeng.play.plugins.AvroPlugin;
 import me.tfeng.play.plugins.HttpPlugin;
 import play.libs.F.Promise;
@@ -60,7 +60,7 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
   }
 
   @Override
-  public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request, PostRequestPreparer postRequestPreparer) {
+  public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request, IpcRequestPreparer postRequestPreparer) {
     return asyncReadBuffers(asyncWriteBuffers(request, postRequestPreparer));
   }
 
@@ -85,7 +85,7 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
     });
   }
 
-  protected Promise<WSResponse> asyncWriteBuffers(List<ByteBuffer> buffers, PostRequestPreparer postRequestPreparer) {
+  protected Promise<WSResponse> asyncWriteBuffers(List<ByteBuffer> buffers, IpcRequestPreparer postRequestPreparer) {
     return Promise.promise(() -> {
       ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
       writeBuffers(buffers, outputStream);
@@ -98,7 +98,7 @@ public class AsyncHttpTransceiver extends HttpTransceiver implements AsyncTransc
     return CONTENT_TYPE;
   }
 
-  protected Promise<WSResponse> postRequest(URL url, byte[] body, PostRequestPreparer postRequestPreparer)
+  protected Promise<WSResponse> postRequest(URL url, byte[] body, IpcRequestPreparer postRequestPreparer)
       throws IOException {
     return HttpPlugin.getInstance().postRequest(url, getContentType(), body, postRequestPreparer);
   }

@@ -20,18 +20,29 @@
 
 package me.tfeng.play.avro;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
+import java.net.URL;
+
+import com.ning.http.client.AsyncHttpClient;
 
 import me.tfeng.play.http.IpcRequestPreparer;
-import play.libs.F.Promise;
+import play.mvc.Http.Request;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public interface AsyncTransceiver {
+public class AuthTokenPreservingIpcRequestPreparer implements IpcRequestPreparer {
 
-  public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request,
-      IpcRequestPreparer postRequestPreparer) throws IOException;
+  private Request request;
+
+  public AuthTokenPreservingIpcRequestPreparer(Request request) {
+    this.request = request;
+  }
+
+  @Override
+  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
+    String authorization = request.getHeader("Authorization");
+    if (authorization != null) {
+      builder.setHeader("Authorization", authorization);
+    }
+  }
 }

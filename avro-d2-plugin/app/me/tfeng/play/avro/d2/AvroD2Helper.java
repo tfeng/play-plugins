@@ -93,7 +93,7 @@ public class AvroD2Helper {
 
   public static URI getUri(Protocol protocol) {
     try {
-      return new URI(SCHEME + ":/" + getServersZkPath(protocol));
+      return new URI(SCHEME + ":/" + getVersionsZkPath(protocol));
     } catch (URISyntaxException e) {
       throw new RuntimeException(e);
     }

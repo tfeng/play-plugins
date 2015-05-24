@@ -21,28 +21,24 @@
 package me.tfeng.play.avro;
 
 import java.net.URL;
+import java.util.Arrays;
 
 import com.ning.http.client.AsyncHttpClient;
 
-import me.tfeng.play.http.PostRequestPreparer;
-import play.mvc.Http.Request;
+import me.tfeng.play.http.IpcRequestPreparer;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AuthTokenPreservingPostRequestPreparer implements PostRequestPreparer {
+public class IpcRequestPreparerChain extends Chain<IpcRequestPreparer>
+    implements IpcRequestPreparer {
 
-  private Request request;
-
-  public AuthTokenPreservingPostRequestPreparer(Request request) {
-    this.request = request;
+  public IpcRequestPreparerChain(IpcRequestPreparer... preparers) {
+    Arrays.stream(preparers).forEach(this::add);
   }
 
   @Override
   public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
-    String authorization = request.getHeader("Authorization");
-    if (authorization != null) {
-      builder.setHeader("Authorization", authorization);
-    }
+    getAll().forEach(preparer -> preparer.prepare(builder, contentType, url));
   }
 }

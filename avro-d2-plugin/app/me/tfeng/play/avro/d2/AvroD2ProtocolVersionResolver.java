@@ -54,13 +54,13 @@ import play.Logger.ALogger;
  */
 public class AvroD2ProtocolVersionResolver implements ProtocolVersionResolver {
 
-  private static final ALogger LOG = Logger.of(AvroD2ProtocolVersionResolver.class);
-
-  private SpecificDatumReader<HandshakeRequest> handshakeReader =
+  private static final SpecificDatumReader<HandshakeRequest> HANDSHAKE_READER =
       new SpecificDatumReader<>(HandshakeRequest.class);
 
-  private SpecificDatumWriter<HandshakeResponse> handshakeWriter =
+  private static final SpecificDatumWriter<HandshakeResponse> HANDSHAKE_WRITER =
       new SpecificDatumWriter<>(HandshakeResponse.class);
+
+  private static final ALogger LOG = Logger.of(AvroD2ProtocolVersionResolver.class);
 
   private Map<List<String>, Protocol> protocolCache = Maps.newHashMap();
 
@@ -71,7 +71,7 @@ public class AvroD2ProtocolVersionResolver implements ProtocolVersionResolver {
     byte[] serverMD5 = serverProtocol.getMD5();
     String namespace = serverProtocol.getNamespace();
     String name = serverProtocol.getName();
-    HandshakeRequest request = handshakeReader.read(null, in);
+    HandshakeRequest request = HANDSHAKE_READER.read(null, in);
     MD5 clientHash = request.getClientHash();
     HandshakeResponse response = new HandshakeResponse();
     Protocol protocol = null;
@@ -107,14 +107,16 @@ public class AvroD2ProtocolVersionResolver implements ProtocolVersionResolver {
     }
 
     if (response.getMatch() != HandshakeMatch.BOTH) {
-      response.setServerProtocol(serverProtocol.toString());
+      // Do not return the server protocol, because it is already in ZooKeeper.
+      // See AvroD2ResponseProcessor.
+      // response.setServerProtocol(serverProtocol.toString());
       response.setServerHash(new MD5(serverMD5));
     }
 
     RPCContext context = new RPCContext();
     context.setHandshakeRequest(request);
     context.setHandshakeResponse(response);
-    handshakeWriter.write(response, out);
+    HANDSHAKE_WRITER.write(response, out);
 
     return protocol;
   }

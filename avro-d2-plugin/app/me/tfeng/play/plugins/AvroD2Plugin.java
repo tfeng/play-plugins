@@ -47,7 +47,7 @@ import me.tfeng.play.avro.d2.AvroD2Client;
 import me.tfeng.play.avro.d2.AvroD2Helper;
 import me.tfeng.play.avro.d2.AvroD2ProtocolVersionResolver;
 import me.tfeng.play.avro.d2.AvroD2Server;
-import me.tfeng.play.http.PostRequestPreparer;
+import me.tfeng.play.http.IpcRequestPreparer;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
@@ -60,13 +60,13 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
 
   private static final ALogger LOG = Logger.of(AvroD2Plugin.class);
 
-  public static <T> T client(Class<T> interfaceClass, PostRequestPreparer... postRequestPreparers) {
+  public static <T> T client(Class<T> interfaceClass, IpcRequestPreparer... postRequestPreparers) {
     return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()),
         postRequestPreparers);
   }
 
   public static <T> T client(Class<T> interfaceClass, SpecificData data,
-      PostRequestPreparer... postRequestPreparers) {
+      IpcRequestPreparer... postRequestPreparers) {
     AvroD2Client client = new AvroD2Client(interfaceClass, data);
     Arrays.stream(postRequestPreparers).forEach(client::addPostRequestPreparer);
     return interfaceClass.cast(Proxy.newProxyInstance(interfaceClass.getClassLoader(),
@@ -83,6 +83,9 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
   private boolean expired;
 
   private Map<Class<?>, String> protocolPaths;
+
+  private final AvroD2ProtocolVersionResolver protocolVersionResolver =
+      new AvroD2ProtocolVersionResolver();
 
   private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -122,6 +125,10 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     return clientRefreshRetryDelay;
   }
 
+  public AvroD2ProtocolVersionResolver getProtocolVersionResolver() {
+    return protocolVersionResolver;
+  }
+
   public ScheduledExecutorService getScheduler() {
     return scheduler;
   }
@@ -157,7 +164,7 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
       protocolPaths = Collections.emptyMap();
     }
 
-    AvroPlugin.getInstance().setProtocolVersionResolver(new AvroD2ProtocolVersionResolver());
+    AvroPlugin.getInstance().setProtocolVersionResolver(protocolVersionResolver);
 
     connect();
     startServers();

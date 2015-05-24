@@ -18,17 +18,18 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.http;
+package me.tfeng.play.avro;
 
-import java.net.URL;
+import java.nio.ByteBuffer;
+import java.util.List;
 
-import com.ning.http.client.AsyncHttpClient;
+import org.apache.avro.ipc.IpcRequestor;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-@FunctionalInterface
-public interface PostRequestPreparer {
+public interface IpcResponseProcessor {
 
-  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url);
+  public Object process(IpcRequestor requestor, IpcRequestor.Request request, String message,
+      List<ByteBuffer> response) throws Exception;
 }

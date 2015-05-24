@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -36,9 +35,11 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
+import com.google.common.collect.Lists;
+
 import me.tfeng.play.avro.AvroHelper;
-import me.tfeng.play.avro.PostRequestPreparerChain;
-import me.tfeng.play.http.PostRequestPreparer;
+import me.tfeng.play.avro.IpcRequestPreparerChain;
+import me.tfeng.play.http.IpcRequestPreparer;
 import me.tfeng.play.plugins.AvroD2Plugin;
 import me.tfeng.play.utils.Constants;
 import play.Logger;
@@ -56,11 +57,12 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   private boolean isGeneric;
   private volatile boolean isVersionRegistered;
   private volatile int lastIndex = -1;
-  private final PostRequestPreparerChain postRequestPreparerChain =
-      new PostRequestPreparerChain();
+  private final IpcRequestPreparerChain postRequestPreparerChain =
+      new IpcRequestPreparerChain();
   private final Protocol protocol;
   private volatile boolean refreshed;
-  private final List<URL> serverUrls = new ArrayList<>();
+  private final AvroD2ResponseProcessor responseProcessor = new AvroD2ResponseProcessor();
+  private final List<URL> serverUrls = Lists.newArrayList();
 
   public AvroD2Client(Class<?> interfaceClass) {
     this(interfaceClass, new SpecificData(interfaceClass.getClassLoader()));
@@ -80,7 +82,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     this.protocol = protocol;
   }
 
-  public void addPostRequestPreparer(PostRequestPreparer postRequestPreparer) {
+  public void addPostRequestPreparer(IpcRequestPreparer postRequestPreparer) {
     postRequestPreparerChain.add(postRequestPreparer);
   }
 
@@ -150,7 +152,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     }
   }
 
-  public void removePostRequestPreparer(PostRequestPreparer postRequestPreparer) {
+  public void removePostRequestPreparer(IpcRequestPreparer postRequestPreparer) {
     postRequestPreparerChain.remove(postRequestPreparer);
   }
 
@@ -181,7 +183,8 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
     IpcRequestor requestor = new IpcRequestor(protocol, new AvroD2Transceiver(this), data);
     requestor.setGeneric(isGeneric);
-    requestor.addPostRequestPreparer(postRequestPreparerChain);
+    requestor.addRequestPreparer(postRequestPreparerChain);
+    requestor.setResponseProcessor(responseProcessor);
     return requestor;
   }
 }

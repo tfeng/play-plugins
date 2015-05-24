@@ -18,27 +18,17 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.avro;
+package me.tfeng.play.http;
 
 import java.net.URL;
-import java.util.Arrays;
 
 import com.ning.http.client.AsyncHttpClient;
-
-import me.tfeng.play.http.PostRequestPreparer;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class PostRequestPreparerChain extends Chain<PostRequestPreparer>
-    implements PostRequestPreparer {
+@FunctionalInterface
+public interface IpcRequestPreparer {
 
-  public PostRequestPreparerChain(PostRequestPreparer... preparers) {
-    Arrays.stream(preparers).forEach(this::add);
-  }
-
-  @Override
-  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
-    getAll().forEach(preparer -> preparer.prepare(builder, contentType, url));
-  }
+  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url);
 }

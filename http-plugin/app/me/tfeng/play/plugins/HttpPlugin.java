@@ -32,7 +32,7 @@ import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
 import com.ning.http.client.AsyncHttpClientConfigBean;
 import com.ning.http.client.Response;
 
-import me.tfeng.play.http.PostRequestPreparer;
+import me.tfeng.play.http.IpcRequestPreparer;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
@@ -107,7 +107,7 @@ public class HttpPlugin extends AbstractPlugin {
   }
 
   public Promise<WSResponse> postRequest(URL url, String contentType, byte[] body,
-      PostRequestPreparer postRequestPreparer) throws IOException {
+      IpcRequestPreparer postRequestPreparer) throws IOException {
     final scala.concurrent.Promise<WSResponse> scalaPromise =
         scala.concurrent.Promise$.MODULE$.apply();
     BoundRequestBuilder builder = asyncHttpClient.preparePost(url.toString())
