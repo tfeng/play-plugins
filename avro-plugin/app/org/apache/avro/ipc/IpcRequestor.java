@@ -87,11 +87,11 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
     context.setResponse(response);
   }
 
-  private boolean isGeneric;
-
   private volatile IpcRequestPreparerChain requestPreparerChain = new IpcRequestPreparerChain();
 
   private volatile IpcResponseProcessor responseProcessor = this;
+
+  private boolean useGenericRecord;
 
   public IpcRequestor(Class<?> iface, AsyncTransceiver transceiver) throws IOException {
     super(iface, (Transceiver) transceiver);
@@ -117,7 +117,7 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
 
   @Override
   public DatumReader<Object> getDatumReader(Schema writer, Schema reader) {
-    if (isGeneric) {
+    if (useGenericRecord) {
       return new GenericDatumReader<>(writer, reader);
     } else {
       return new SpecificDatumReader<>(writer, reader, getSpecificData());
@@ -126,7 +126,7 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
 
   @Override
   public DatumWriter<Object> getDatumWriter(Schema schema) {
-    if (isGeneric) {
+    if (useGenericRecord) {
       return new GenericDatumWriter<>(schema);
     } else {
       return new SpecificDatumWriter<>(schema, getSpecificData());
@@ -146,10 +146,6 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
       int timeout = HttpPlugin.getInstance().getRequestTimeout();
       return promise.get(timeout);
     }
-  }
-
-  public boolean isGeneric() {
-    return isGeneric;
   }
 
   @Override
@@ -238,11 +234,15 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
         });
   }
 
-  public void setGeneric(boolean isGeneric) {
-    this.isGeneric = isGeneric;
-  }
-
   public void setResponseProcessor(IpcResponseProcessor processor) {
     responseProcessor = processor;
+  }
+
+  public void setUseGenericRecord(boolean useGenericRecord) {
+    this.useGenericRecord = useGenericRecord;
+  }
+
+  public boolean useGenericRecord() {
+    return useGenericRecord;
   }
 }

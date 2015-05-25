@@ -54,15 +54,23 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   private static final ALogger LOG = Logger.of(AvroD2Client.class);
 
   private final SpecificData data;
-  private boolean isGeneric;
+
   private volatile boolean isVersionRegistered;
+
   private volatile int lastIndex = -1;
+
   private final IpcRequestPreparerChain postRequestPreparerChain =
       new IpcRequestPreparerChain();
+
   private final Protocol protocol;
+
   private volatile boolean refreshed;
+
   private final AvroD2ResponseProcessor responseProcessor = new AvroD2ResponseProcessor();
+
   private final List<URL> serverUrls = Lists.newArrayList();
+
+  private boolean useGenericRecord;
 
   public AvroD2Client(Class<?> interfaceClass) {
     this(interfaceClass, new SpecificData(interfaceClass.getClassLoader()));
@@ -102,10 +110,6 @@ public class AvroD2Client implements Watcher, InvocationHandler {
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     return setupRequest().invoke(proxy, method, args);
-  }
-
-  public synchronized boolean isGeneric() {
-    return isGeneric;
   }
 
   @Override
@@ -160,8 +164,12 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     return setupRequest().request(message, request);
   }
 
-  public synchronized void setGeneric(boolean isGeneric) {
-    this.isGeneric = isGeneric;
+  public synchronized void setUseGenericRecord(boolean useGenericRecord) {
+    this.useGenericRecord = useGenericRecord;
+  }
+
+  public synchronized boolean useGenericRecord() {
+    return useGenericRecord;
   }
 
   private void scheduleRefresh() {
@@ -182,7 +190,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     }
 
     IpcRequestor requestor = new IpcRequestor(protocol, new AvroD2Transceiver(this), data);
-    requestor.setGeneric(isGeneric);
+    requestor.setUseGenericRecord(useGenericRecord);
     requestor.addRequestPreparer(postRequestPreparerChain);
     requestor.setResponseProcessor(responseProcessor);
     return requestor;
