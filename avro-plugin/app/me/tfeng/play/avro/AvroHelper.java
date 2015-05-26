@@ -52,7 +52,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import me.tfeng.play.utils.Constants;
+import me.tfeng.play.common.Constants;
 import play.libs.Json;
 
 /**

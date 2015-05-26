@@ -27,7 +27,7 @@ import org.apache.avro.generic.IndexedRecord;
 import kafka.serializer.Decoder;
 import kafka.utils.VerifiableProperties;
 import me.tfeng.play.avro.AvroHelper;
-import me.tfeng.play.utils.Constants;
+import me.tfeng.play.common.Constants;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)

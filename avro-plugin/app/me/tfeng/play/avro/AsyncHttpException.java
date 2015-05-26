@@ -20,29 +20,29 @@
 
 package me.tfeng.play.avro;
 
+import java.io.IOException;
 import java.net.URL;
-
-import com.ning.http.client.AsyncHttpClient;
-
-import me.tfeng.play.http.IpcRequestPreparer;
-import play.mvc.Http.Request;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AuthTokenPreservingIpcRequestPreparer implements IpcRequestPreparer {
+public class AsyncHttpException extends IOException {
 
-  private Request request;
+  private static final long serialVersionUID = 1L;
+  private final int statusCode;
+  private final URL url;
 
-  public AuthTokenPreservingIpcRequestPreparer(Request request) {
-    this.request = request;
+  public AsyncHttpException(int statusCode, URL url) {
+    super("Server returned HTTP response code: " + statusCode + " for URL: " + url);
+    this.statusCode = statusCode;
+    this.url = url;
   }
 
-  @Override
-  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
-    String authorization = request.getHeader("Authorization");
-    if (authorization != null) {
-      builder.setHeader("Authorization", authorization);
-    }
+  public int getStatusCode() {
+    return statusCode;
+  }
+
+  public URL getUrl() {
+    return url;
   }
 }

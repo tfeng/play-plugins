@@ -42,7 +42,9 @@ import me.tfeng.play.spring.ApplicationContextHolder;
 @RunWith(SpringJUnit4ClassRunner.class)
 public abstract class AbstractSpringTest {
 
-  private static final File TEMPORARY_DIRECTORY = new File(System.getProperty("java.io.tmpdir"));
+  public static final String LOCK_FILE_NAME = "play-test.lock";
+
+  public static final File LOC_FILE_DIRECTORY = new File(System.getProperty("java.io.tmpdir"));
 
   @Autowired
   protected ConfigurableApplicationContext applicationContext;
@@ -59,6 +61,6 @@ public abstract class AbstractSpringTest {
   }
 
   protected File lockFile() throws IOException {
-    return new File(TEMPORARY_DIRECTORY, "play-test.lock");
+    return new File(LOC_FILE_DIRECTORY, LOCK_FILE_NAME);
   }
 }

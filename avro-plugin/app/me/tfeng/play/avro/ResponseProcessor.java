@@ -20,31 +20,16 @@
 
 package me.tfeng.play.avro;
 
-import java.util.Collections;
+import java.nio.ByteBuffer;
 import java.util.List;
 
-import com.google.common.collect.Lists;
+import org.apache.avro.ipc.IpcRequestor;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class Chain<T> {
+public interface ResponseProcessor {
 
-  private final List<T> list = Collections.synchronizedList(Lists.newArrayList());
-
-  public synchronized void add(T element) {
-    list.add(element);
-  }
-
-  public List<T> getAll() {
-    return Collections.unmodifiableList(list);
-  }
-
-  public void remove(Class<?> elementClass) {
-    list.removeIf(elementClass::isInstance);
-  }
-
-  public void remove(T element) {
-    list.remove(element);
-  }
+  public Object process(IpcRequestor requestor, IpcRequestor.Request request, String message,
+      List<ByteBuffer> response) throws Exception;
 }

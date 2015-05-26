@@ -18,8 +18,9 @@
  * limitations under the License.
  */
 
-package org.apache.avro.ipc;
+package me.tfeng.play.avro;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -33,21 +34,26 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.Decoder;
 import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.io.Encoder;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.ipc.RPCContext;
+import org.apache.avro.ipc.RPCContextHelper;
+import org.apache.avro.ipc.RPCPlugin;
+import org.apache.avro.ipc.Transceiver;
+import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.ByteBufferInputStream;
 import org.apache.avro.util.ByteBufferOutputStream;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import me.tfeng.play.avro.AvroHelper;
 import me.tfeng.play.plugins.AvroPlugin;
 import play.libs.F.Promise;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AsyncResponder extends InternalSpecificResponder {
+public class AsyncResponder extends SpecificResponder {
 
   private static final Schema META = Schema.createMap(Schema.create(Schema.Type.BYTES));
 
@@ -95,7 +101,7 @@ public class AsyncResponder extends InternalSpecificResponder {
     handshake = bbo.getBufferList();
 
     // read request using remote protocol specification
-    context.setRequestCallMeta(META_READER.read(null, in));
+    RPCContextHelper.setResponseCallMeta(context, META_READER.read(null, in));
     String messageName = in.readString(null).toString();
     if (messageName.equals("")) {
       // a handshake ping
@@ -121,12 +127,12 @@ public class AsyncResponder extends InternalSpecificResponder {
     if (AvroHelper.isAvroClient(impl.getClass())) {
       Promise<?> promise = (Promise<?>) respond(m, request);
       return promise.map(result -> {
-          context.setResponse(result);
+          RPCContextHelper.setResponse(context, result);
           processResult(bbo, out, context, m, payload, handshakeFinal, result, null);
           return bbo.getBufferList();
       }).recover(e -> {
         if (e instanceof Exception) {
-          context.setError((Exception) e);
+          RPCContextHelper.setError(context, (Exception) e);
           processResult(bbo, out, context, m, payload, handshakeFinal, null, (Exception) e);
           return bbo.getBufferList();
         } else {
@@ -141,10 +147,10 @@ public class AsyncResponder extends InternalSpecificResponder {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         try {
           Object result = respond(m, request);
-          context.setResponse(result);
+          RPCContextHelper.setResponse(context, result);
           processResult(bbo, out, context, m, payload, handshakeFinal, result, null);
         } catch (Exception e) {
-          context.setError(e);
+          RPCContextHelper.setError(context, e);
           processResult(bbo, out, context, m, payload, handshakeFinal, null, e);
         } finally {
           SecurityContextHolder.getContext().setAuthentication(currentAuthentication);
@@ -152,6 +158,10 @@ public class AsyncResponder extends InternalSpecificResponder {
         return bbo.getBufferList();
       }, AvroPlugin.getInstance().getExecutionContext());
     }
+  }
+
+  protected Protocol handshake(Decoder in, Encoder out, Transceiver connection) throws IOException {
+    return AvroPlugin.getInstance().getProtocolVersionResolver().resolve(this, in, out, connection);
   }
 
   private void processResult(ByteBufferOutputStream bbo, BinaryEncoder out, RPCContext context,
@@ -171,7 +181,7 @@ public class AsyncResponder extends InternalSpecificResponder {
     payload = bbo.getBufferList();
 
     // Grab meta-data from plugins
-    context.setResponsePayload(payload);
+    RPCContextHelper.setResponsePayload(context, payload);
     for (RPCPlugin plugin : rpcMetaPlugins) {
       plugin.serverSendResponse(context);
     }

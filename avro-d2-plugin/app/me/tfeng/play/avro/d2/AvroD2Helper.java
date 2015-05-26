@@ -35,7 +35,7 @@ import org.apache.zookeeper.ZooKeeper;
 
 import com.google.common.base.Strings;
 
-import me.tfeng.play.utils.Constants;
+import me.tfeng.play.common.Constants;
 import play.Logger;
 import play.Logger.ALogger;
 

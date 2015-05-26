@@ -18,14 +18,33 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.utils;
+package me.tfeng.play.common;
 
-import java.nio.charset.Charset;
+import java.util.Collections;
+import java.util.List;
+
+import com.google.common.collect.Lists;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class Constants {
+public class Chain<T> {
 
-  public static final Charset UTF8 = Charset.forName("utf-8");
+  private final List<T> list = Collections.synchronizedList(Lists.newArrayList());
+
+  public synchronized void add(T element) {
+    list.add(element);
+  }
+
+  public List<T> getAll() {
+    return Collections.unmodifiableList(list);
+  }
+
+  public void remove(Class<?> elementClass) {
+    list.removeIf(elementClass::isInstance);
+  }
+
+  public void remove(T element) {
+    list.remove(element);
+  }
 }

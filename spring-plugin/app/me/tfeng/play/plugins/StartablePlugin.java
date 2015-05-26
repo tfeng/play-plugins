@@ -35,7 +35,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 
 import me.tfeng.play.spring.ExtendedStartable;
 import me.tfeng.play.spring.Startable;
-import me.tfeng.play.utils.DependencyUtils;
+import me.tfeng.play.common.DependencyUtils;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;

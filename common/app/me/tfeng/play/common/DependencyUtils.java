@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.utils;
+package me.tfeng.play.common;
 
 import java.util.ArrayList;
 import java.util.Collection;

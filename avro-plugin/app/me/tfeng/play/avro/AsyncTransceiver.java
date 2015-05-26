@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-import me.tfeng.play.http.IpcRequestPreparer;
+import me.tfeng.play.http.RequestPreparer;
 import play.libs.F.Promise;
 
 /**
@@ -32,6 +32,6 @@ import play.libs.F.Promise;
  */
 public interface AsyncTransceiver {
 
-  public Promise<List<ByteBuffer>> asyncTransceive(List<ByteBuffer> request,
-      IpcRequestPreparer postRequestPreparer) throws IOException;
+  public Promise<List<ByteBuffer>> transceive(List<ByteBuffer> request,
+      RequestPreparer postRequestPreparer) throws IOException;
 }

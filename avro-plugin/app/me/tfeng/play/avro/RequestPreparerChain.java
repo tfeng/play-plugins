@@ -18,25 +18,28 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.kafka;
+package me.tfeng.play.avro;
 
-import org.I0Itec.zkclient.exception.ZkMarshallingError;
-import org.I0Itec.zkclient.serialize.ZkSerializer;
+import java.net.URL;
+import java.util.Arrays;
 
-import me.tfeng.play.common.Constants;
+import com.ning.http.client.AsyncHttpClient;
+
+import me.tfeng.play.common.Chain;
+import me.tfeng.play.http.RequestPreparer;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class ZkStringSerializer implements ZkSerializer {
+public class RequestPreparerChain extends Chain<RequestPreparer> implements RequestPreparer {
 
-  @Override
-  public Object deserialize(byte[] bytes) throws ZkMarshallingError {
-    return new String(bytes, Constants.UTF8);
+  public RequestPreparerChain(RequestPreparer... preparers) {
+    Arrays.stream(preparers).forEach(this::add);
   }
 
   @Override
-  public byte[] serialize(Object data) throws ZkMarshallingError {
-    return ((String) data).getBytes(Constants.UTF8);
+  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
+    getAll().forEach(preparer -> preparer.prepare(builder, contentType, url));
   }
 }
+

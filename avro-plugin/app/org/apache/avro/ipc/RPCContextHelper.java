@@ -20,29 +20,28 @@
 
 package org.apache.avro.ipc;
 
-import java.io.IOException;
-import java.net.URL;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AsyncHttpException extends IOException {
+public class RPCContextHelper {
 
-  private static final long serialVersionUID = 1L;
-  private final int statusCode;
-  private final URL url;
-
-  public AsyncHttpException(int statusCode, URL url) {
-    super("Server returned HTTP response code: " + statusCode + " for URL: " + url);
-    this.statusCode = statusCode;
-    this.url = url;
+  public static void setError(RPCContext context, Exception error) {
+    context.setError(error);
   }
 
-  public int getStatusCode() {
-    return statusCode;
+  public static void setResponse(RPCContext context, Object response) {
+    context.setResponse(response);
   }
 
-  public URL getUrl() {
-    return url;
+  public static void setResponseCallMeta(RPCContext context, Map<String, ByteBuffer> meta) {
+    context.setRequestCallMeta(meta);
+  }
+
+  public static void setResponsePayload(RPCContext context, List<ByteBuffer> payload) {
+    context.setResponsePayload(payload);
   }
 }

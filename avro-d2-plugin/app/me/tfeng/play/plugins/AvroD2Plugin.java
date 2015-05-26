@@ -47,7 +47,7 @@ import me.tfeng.play.avro.d2.AvroD2Client;
 import me.tfeng.play.avro.d2.AvroD2Helper;
 import me.tfeng.play.avro.d2.AvroD2ProtocolVersionResolver;
 import me.tfeng.play.avro.d2.AvroD2Server;
-import me.tfeng.play.http.IpcRequestPreparer;
+import me.tfeng.play.http.RequestPreparer;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
@@ -60,13 +60,13 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
 
   private static final ALogger LOG = Logger.of(AvroD2Plugin.class);
 
-  public static <T> T client(Class<T> interfaceClass, IpcRequestPreparer... postRequestPreparers) {
+  public static <T> T client(Class<T> interfaceClass, RequestPreparer... postRequestPreparers) {
     return client(interfaceClass, new SpecificData(interfaceClass.getClassLoader()),
         postRequestPreparers);
   }
 
   public static <T> T client(Class<T> interfaceClass, SpecificData data,
-      IpcRequestPreparer... postRequestPreparers) {
+      RequestPreparer... postRequestPreparers) {
     AvroD2Client client = new AvroD2Client(interfaceClass, data);
     Arrays.stream(postRequestPreparers).forEach(client::addPostRequestPreparer);
     return interfaceClass.cast(Proxy.newProxyInstance(interfaceClass.getClassLoader(),

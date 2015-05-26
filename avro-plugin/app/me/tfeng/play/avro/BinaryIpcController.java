@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.avro.ipc.AsyncHttpTransceiver;
-import org.apache.avro.ipc.AsyncResponder;
 import org.apache.http.entity.ContentType;
 
 import me.tfeng.play.plugins.AvroPlugin;

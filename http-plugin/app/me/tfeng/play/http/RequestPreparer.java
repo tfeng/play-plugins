@@ -28,7 +28,7 @@ import com.ning.http.client.AsyncHttpClient;
  * @author Thomas Feng (huining.feng@gmail.com)
  */
 @FunctionalInterface
-public interface IpcRequestPreparer {
+public interface RequestPreparer {
 
   public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url);
 }

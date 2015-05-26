@@ -36,17 +36,18 @@ import org.apache.avro.ipc.HandshakeMatch;
 import org.apache.avro.ipc.HandshakeResponse;
 import org.apache.avro.ipc.IpcRequestor;
 import org.apache.avro.ipc.RPCContext;
+import org.apache.avro.ipc.RPCContextHelper;
 import org.apache.avro.util.ByteBufferInputStream;
 
 import com.google.common.collect.Maps;
 
-import me.tfeng.play.avro.IpcResponseProcessor;
+import me.tfeng.play.avro.ResponseProcessor;
 import me.tfeng.play.plugins.AvroD2Plugin;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroD2ResponseProcessor implements IpcResponseProcessor {
+public class AvroD2ResponseProcessor implements ResponseProcessor {
 
   private final Map<String, Protocol> protocolCache =
       Collections.synchronizedMap(Maps.newHashMap());
@@ -74,13 +75,13 @@ public class AvroD2ResponseProcessor implements IpcResponseProcessor {
     }
 
     RPCContext context = request.getContext();
-    IpcRequestor.setResponseCallMetaInRPCContext(context, IpcRequestor.META_READER.read(null, in));
+    RPCContextHelper.setResponseCallMeta(context, IpcRequestor.META_READER.read(null, in));
 
     if (!in.readBoolean()) {
       Schema localSchema = localProtocol.getMessages().get(message).getResponse();
       Schema remoteSchema = serverProtocol.getMessages().get(message).getResponse();
       Object responseObject = requestor.getDatumReader(remoteSchema, localSchema).read(null, in);
-      IpcRequestor.setResponseInRPCContext(context, responseObject);
+      RPCContextHelper.setResponse(context, responseObject);
       requestor.getRPCPlugins().forEach(plugin -> plugin.clientReceiveResponse(context));
       return responseObject;
     } else {
@@ -93,7 +94,7 @@ public class AvroD2ResponseProcessor implements IpcResponseProcessor {
       } else {
         exception = new AvroRuntimeException(error.toString());
       }
-      IpcRequestor.setErrorInRPCContext(context, exception);
+      RPCContextHelper.setError(context, exception);
       requestor.getRPCPlugins().forEach(plugin -> plugin.clientReceiveResponse(context));
       throw exception;
     }

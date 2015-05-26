@@ -4,7 +4,7 @@ object Versions {
 
   val project = "0.4.0-SNAPSHOT"
 
-  val sbtPlugins = "0.3.8"
+  val sbtPlugins = "0.4.0-SNAPSHOT"
 
   val scala = "2.10.4"
 
@@ -16,7 +16,7 @@ object Versions {
 
   val mockito = "1.10.19"
 
-  val mongoDb = "3.0.0"
+  val mongoDb = "3.0.1"
 
   val spring = "4.0.9.RELEASE"
 
@@ -28,7 +28,7 @@ object Versions {
 
   val httpComponents = "4.4.1"
 
-  val webjarsLocator = "0.21"
+  val webjarsLocator = "0.23"
 
   val zookeeper = "3.4.6"
 }

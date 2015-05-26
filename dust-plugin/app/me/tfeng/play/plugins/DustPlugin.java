@@ -50,7 +50,7 @@ import com.google.common.io.CharStreams;
 
 import akka.dispatch.ExecutionContexts;
 import akka.dispatch.Futures;
-import me.tfeng.play.utils.Constants;
+import me.tfeng.play.common.Constants;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
@@ -129,7 +129,7 @@ public class DustPlugin extends AbstractPlugin {
   }
 
   public Promise<String> render(String template, JsonNode data) {
-    Future<String> future = Futures.<String>future(() -> {
+    Future<String> future = Futures.future(() -> {
       ScriptEngine engine = engines.poll();
 
       try {
@@ -163,7 +163,7 @@ public class DustPlugin extends AbstractPlugin {
       }
     }, executionContext);
 
-    return Promise.<String>wrap(future);
+    return Promise.wrap(future);
   }
 
   private Object evaluate(ScriptEngine engine, String script, Map<String, Object> data)

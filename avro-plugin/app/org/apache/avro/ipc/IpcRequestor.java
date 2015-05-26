@@ -43,10 +43,10 @@ import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.util.ByteBufferInputStream;
 
 import me.tfeng.play.avro.AsyncTransceiver;
-import me.tfeng.play.avro.AuthTokenPreservingIpcRequestPreparer;
-import me.tfeng.play.avro.IpcRequestPreparerChain;
-import me.tfeng.play.avro.IpcResponseProcessor;
-import me.tfeng.play.http.IpcRequestPreparer;
+import me.tfeng.play.avro.AuthTokenPreservingRequestPreparer;
+import me.tfeng.play.avro.RequestPreparerChain;
+import me.tfeng.play.avro.ResponseProcessor;
+import me.tfeng.play.http.RequestPreparer;
 import me.tfeng.play.plugins.HttpPlugin;
 import play.Logger;
 import play.Logger.ALogger;
@@ -57,7 +57,7 @@ import play.mvc.Http;
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class IpcRequestor extends SpecificRequestor implements IpcResponseProcessor {
+public class IpcRequestor extends SpecificRequestor implements ResponseProcessor {
 
   public class Request extends Requestor.Request {
 
@@ -74,22 +74,9 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
 
   private static final ALogger LOG = Logger.of(IpcRequestor.class);
 
-  public static void setErrorInRPCContext(RPCContext context, Exception error) {
-    context.setError(error);
-  }
+  private volatile RequestPreparerChain requestPreparerChain = new RequestPreparerChain();
 
-  public static void setResponseCallMetaInRPCContext(RPCContext context,
-      Map<String,ByteBuffer> meta) {
-    context.setRequestCallMeta(meta);
-  }
-
-  public static void setResponseInRPCContext(RPCContext context, Object response) {
-    context.setResponse(response);
-  }
-
-  private volatile IpcRequestPreparerChain requestPreparerChain = new IpcRequestPreparerChain();
-
-  private volatile IpcResponseProcessor responseProcessor = this;
+  private volatile ResponseProcessor responseProcessor = this;
 
   private boolean useGenericRecord;
 
@@ -111,7 +98,7 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
     super(protocol, (Transceiver) transceiver, data);
   }
 
-  public void addRequestPreparer(IpcRequestPreparer postRequestPreparer) {
+  public void addRequestPreparer(RequestPreparer postRequestPreparer) {
     requestPreparerChain.add(postRequestPreparer);
   }
 
@@ -149,7 +136,7 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
   }
 
   @Override
-  public Object process(IpcRequestor requestor, IpcRequestor.Request request, String message,
+  public Object process(IpcRequestor requestor, Request request, String message,
       List<ByteBuffer> response) throws Exception {
     ByteBufferInputStream bbi = new ByteBufferInputStream(response);
     BinaryDecoder in = DecoderFactory.get().binaryDecoder(bbi, null);
@@ -163,13 +150,13 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
     }
 
     RPCContext context = request.getContext();
-    setResponseCallMetaInRPCContext(context, META_READER.read(null, in));
+    RPCContextHelper.setResponseCallMeta(context, META_READER.read(null, in));
 
     if (!in.readBoolean()) {
       Schema localSchema = localProtocol.getMessages().get(message).getResponse();
       Schema remoteSchema = serverProtocol.getMessages().get(message).getResponse();
       Object responseObject = new SpecificDatumReader<>(remoteSchema, localSchema).read(null, in);
-      setResponseInRPCContext(context, responseObject);
+      RPCContextHelper.setResponse(context, responseObject);
       requestor.getRPCPlugins().forEach(plugin -> plugin.clientReceiveResponse(context));
       return responseObject;
     } else {
@@ -182,13 +169,13 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
       } else {
         exception = new AvroRuntimeException(error.toString());
       }
-      setErrorInRPCContext(context, exception);
+      RPCContextHelper.setError(context, exception);
       requestor.getRPCPlugins().forEach(plugin -> plugin.clientReceiveResponse(context));
       throw exception;
     }
   }
 
-  public void removeRequestPreparer(IpcRequestPreparer requestPreparer) {
+  public void removeRequestPreparer(RequestPreparer requestPreparer) {
     requestPreparerChain.remove(requestPreparer);
   }
 
@@ -196,7 +183,7 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
     AsyncTransceiver transceiver = (AsyncTransceiver) getTransceiver();
     Request ipcRequest = new Request(message, args, new RPCContext());
     CallFuture<Object> callFuture = ipcRequest.getMessage().isOneWay() ? null : new CallFuture<>();
-    IpcRequestPreparer postRequestPreparer = null;
+    RequestPreparer postRequestPreparer = null;
     Http.Request controllerRequest = null;
     try {
       controllerRequest = Controller.request();
@@ -205,11 +192,11 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
       postRequestPreparer = requestPreparerChain;
     }
     if (controllerRequest != null) {
-      postRequestPreparer = new IpcRequestPreparerChain(
-          new AuthTokenPreservingIpcRequestPreparer(controllerRequest), requestPreparerChain);
+      postRequestPreparer = new RequestPreparerChain(
+          new AuthTokenPreservingRequestPreparer(controllerRequest), requestPreparerChain);
     }
 
-    return transceiver.asyncTransceive(ipcRequest.getBytes(), postRequestPreparer).map(
+    return transceiver.transceive(ipcRequest.getBytes(), postRequestPreparer).map(
         response -> {
           Object responseObject;
           try {
@@ -234,7 +221,7 @@ public class IpcRequestor extends SpecificRequestor implements IpcResponseProces
         });
   }
 
-  public void setResponseProcessor(IpcResponseProcessor processor) {
+  public void setResponseProcessor(ResponseProcessor processor) {
     responseProcessor = processor;
   }
 

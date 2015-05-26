@@ -36,8 +36,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import me.tfeng.play.common.Constants;
 import me.tfeng.play.plugins.AvroPlugin;
-import me.tfeng.play.utils.Constants;
 import play.Logger;
 import play.Logger.ALogger;
 import play.Play;

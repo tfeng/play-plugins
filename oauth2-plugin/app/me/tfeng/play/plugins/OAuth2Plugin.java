@@ -22,7 +22,6 @@ package me.tfeng.play.plugins;
 
 import java.lang.reflect.InvocationTargetException;
 
-import org.apache.avro.ipc.AsyncHttpException;
 import org.apache.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -32,6 +31,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.common.exceptions.ClientAuthenticationException;
 import org.springframework.security.oauth2.provider.ClientRegistrationException;
 
+import me.tfeng.play.avro.AsyncHttpException;
 import me.tfeng.play.security.oauth2.AuthenticationError;
 import me.tfeng.play.security.oauth2.AuthenticationManagerClient;
 import me.tfeng.play.spring.WithSpringConfig;

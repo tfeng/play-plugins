@@ -18,27 +18,14 @@
  * limitations under the License.
  */
 
-package me.tfeng.play.avro;
+package me.tfeng.play.common;
 
-import java.net.URL;
-import java.util.Arrays;
-
-import com.ning.http.client.AsyncHttpClient;
-
-import me.tfeng.play.http.IpcRequestPreparer;
+import java.nio.charset.Charset;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class IpcRequestPreparerChain extends Chain<IpcRequestPreparer>
-    implements IpcRequestPreparer {
+public class Constants {
 
-  public IpcRequestPreparerChain(IpcRequestPreparer... preparers) {
-    Arrays.stream(preparers).forEach(this::add);
-  }
-
-  @Override
-  public void prepare(AsyncHttpClient.BoundRequestBuilder builder, String contentType, URL url) {
-    getAll().forEach(preparer -> preparer.prepare(builder, contentType, url));
-  }
+  public static final Charset UTF8 = Charset.forName("utf-8");
 }

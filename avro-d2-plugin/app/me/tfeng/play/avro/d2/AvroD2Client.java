@@ -38,10 +38,10 @@ import org.apache.zookeeper.ZooKeeper;
 import com.google.common.collect.Lists;
 
 import me.tfeng.play.avro.AvroHelper;
-import me.tfeng.play.avro.IpcRequestPreparerChain;
-import me.tfeng.play.http.IpcRequestPreparer;
+import me.tfeng.play.avro.RequestPreparerChain;
+import me.tfeng.play.common.Constants;
+import me.tfeng.play.http.RequestPreparer;
 import me.tfeng.play.plugins.AvroD2Plugin;
-import me.tfeng.play.utils.Constants;
 import play.Logger;
 import play.Logger.ALogger;
 import play.libs.F.Promise;
@@ -59,8 +59,8 @@ public class AvroD2Client implements Watcher, InvocationHandler {
 
   private volatile int lastIndex = -1;
 
-  private final IpcRequestPreparerChain postRequestPreparerChain =
-      new IpcRequestPreparerChain();
+  private final RequestPreparerChain postRequestPreparerChain =
+      new RequestPreparerChain();
 
   private final Protocol protocol;
 
@@ -90,7 +90,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     this.protocol = protocol;
   }
 
-  public void addPostRequestPreparer(IpcRequestPreparer postRequestPreparer) {
+  public void addPostRequestPreparer(RequestPreparer postRequestPreparer) {
     postRequestPreparerChain.add(postRequestPreparer);
   }
 
@@ -156,7 +156,7 @@ public class AvroD2Client implements Watcher, InvocationHandler {
     }
   }
 
-  public void removePostRequestPreparer(IpcRequestPreparer postRequestPreparer) {
+  public void removePostRequestPreparer(RequestPreparer postRequestPreparer) {
     postRequestPreparerChain.remove(postRequestPreparer);
   }
 
