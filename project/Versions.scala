@@ -2,7 +2,7 @@ package me.tfeng.play.plugins
 
 object Versions {
 
-  val project = "0.4.0"
+  val project = "0.4.1-SNAPSHOT"
 
   val sbtPlugins = "0.4.0"
 
@@ -18,9 +18,9 @@ object Versions {
 
   val mongoDb = "3.0.1"
 
-  val spring = "4.0.9.RELEASE"
+  val spring = "4.1.6.RELEASE"
 
-  val springSecurity = "3.2.6.RELEASE"
+  val springSecurity = "4.0.1.RELEASE"
 
   val springSecurityOauth = "2.0.7.RELEASE"
 
