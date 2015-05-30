@@ -33,9 +33,9 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 
+import me.tfeng.play.common.DependencyUtils;
 import me.tfeng.play.spring.ExtendedStartable;
 import me.tfeng.play.spring.Startable;
-import me.tfeng.play.common.DependencyUtils;
 import play.Application;
 import play.Logger;
 import play.Logger.ALogger;
@@ -82,7 +82,7 @@ public class StartablePlugin extends AbstractPlugin {
           } else if (ArrayUtils.contains(beanDefinition2.getDependsOn(), beanName1)) {
             return -1;
           } else {
-            return 0;
+            return beanName1.compareTo(beanName2);
           }
         };
     Set<Entry<String, Startable>> entries =

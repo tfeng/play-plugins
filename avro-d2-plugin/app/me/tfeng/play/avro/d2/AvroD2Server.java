@@ -33,14 +33,13 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
 
 import me.tfeng.play.plugins.AvroD2Plugin;
-import me.tfeng.play.spring.ExtendedStartable;
 import play.Logger;
 import play.Logger.ALogger;
 
 /**
  * @author Thomas Feng (huining.feng@gmail.com)
  */
-public class AvroD2Server implements ExtendedStartable, Watcher {
+public class AvroD2Server implements Watcher {
 
   private static final ALogger LOG = Logger.of(AvroD2Server.class);
 
@@ -51,24 +50,6 @@ public class AvroD2Server implements ExtendedStartable, Watcher {
   public AvroD2Server(Protocol protocol, URL url) {
     this.protocol = protocol;
     this.url = url;
-  }
-
-  @Override
-  public void afterStart() throws Throwable {
-    register();
-  }
-
-  @Override
-  public void afterStop() throws Throwable {
-  }
-
-  @Override
-  public void beforeStart() throws Throwable {
-  }
-
-  @Override
-  public void beforeStop() throws Throwable {
-    close();
   }
 
   public synchronized void close() throws InterruptedException, KeeperException {
@@ -93,14 +74,6 @@ public class AvroD2Server implements ExtendedStartable, Watcher {
   }
 
   @Override
-  public void onStart() throws Throwable {
-  }
-
-  @Override
-  public void onStop() throws Throwable {
-  }
-
-  @Override
   public void process(WatchedEvent event) {
     if (event.getType() == EventType.NodeDeleted && event.getPath().equals(nodePath)
         || event.getType() == EventType.None && event.getState() == KeeperState.SyncConnected) {
@@ -113,15 +86,29 @@ public class AvroD2Server implements ExtendedStartable, Watcher {
   public synchronized void register() {
     try {
       close();
-      LOG.info("Registering server for " + protocol.getName() + " at " + url);
       ZooKeeper zk = AvroD2Plugin.getInstance().getZooKeeper();
-      AvroD2Helper.createVersionNode(zk, protocol);
-      nodePath = AvroD2Helper.createServerNode(zk, protocol, url);
-      zk.getData(nodePath, this, null);
+      if (zk == null) {
+        // ZooKeeper is not initialized yet.
+        scheduleRegister();
+      } else {
+        AvroD2Helper.createVersionNode(zk, protocol);
+        nodePath = AvroD2Helper.createServerNode(zk, protocol, url);
+        zk.getData(nodePath, this, null);
+        LOG.info("Registered server for " + protocol.getName() + " at " + url);
+      }
     } catch (Exception e) {
-      LOG.warn("Unable to register server for " + protocol.getName() + "; retry later", e);
-      AvroD2Plugin.getInstance().getScheduler().schedule(this::register,
-          AvroD2Plugin.getInstance().getServerRegisterRetryDelay(), TimeUnit.MILLISECONDS);
+      if (e instanceof KeeperException) {
+        LOG.warn("Unable to register server for " + protocol.getName() + " (code = "
+            + ((KeeperException) e).code() + "); retry later");
+      } else {
+        LOG.warn("Unable to register server for " + protocol.getName() + "; retry later", e);
+      }
+      scheduleRegister();
     }
+  }
+
+  private void scheduleRegister() {
+    AvroD2Plugin.getInstance().getScheduler().schedule(this::register,
+        AvroD2Plugin.getInstance().getServerRegisterRetryDelay(), TimeUnit.MILLISECONDS);
   }
 }

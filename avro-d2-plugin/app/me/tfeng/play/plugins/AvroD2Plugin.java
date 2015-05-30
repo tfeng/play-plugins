@@ -82,6 +82,8 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
 
   private boolean expired;
 
+  private boolean isConnected;
+
   private Map<Class<?>, String> protocolPaths;
 
   private final AvroD2ProtocolVersionResolver protocolVersionResolver =
@@ -165,14 +167,10 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     }
 
     AvroPlugin.getInstance().setProtocolVersionResolver(protocolVersionResolver);
-
-    connect();
-    startServers();
   }
 
   @Override
   public void onStop() {
-    stopServers();
   }
 
   @Override
@@ -197,7 +195,7 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
     }
   }
 
-  private void startServers() {
+  public void startServers() {
     servers = new ArrayList<>(protocolPaths.size());
     for (Entry<Class<?>, String> entry : protocolPaths.entrySet()) {
       Protocol protocol = AvroHelper.getProtocol(entry.getKey());
@@ -212,12 +210,12 @@ public class AvroD2Plugin extends AbstractPlugin implements Watcher {
         throw new RuntimeException("Unable to initialize server", e);
       }
       AvroD2Server server = new AvroD2Server(protocol, url);
+      server.register();
       servers.add(server);
     }
-    StartablePlugin.getInstance().addStartables(servers);
   }
 
-  private void stopServers() {
+  public void stopServers() {
     servers.stream().forEach(server -> {
       try {
         server.close();
